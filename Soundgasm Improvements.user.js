@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Soundgasm Improvements
 // @namespace   V.L
-// @version     0.13
+// @version     0.14
 // @description Restyles and adds new functionality to Soundgasm --- dark mode/keyboard shortcuts/quick download/and more
 // @author      Valerio Lyndon
 // @match       https://soundgasm.net/*
@@ -455,7 +455,6 @@ function processDescription(desc, descDest, title, titleDest) {
 	// todo: remove duplicates
 	tags = [];
 	for(tag of tagIterator) {
-        console.log(tag);
 		if(typeof tag[1] !== 'undefined') { tags.push(tag[1]); }
 		else if(typeof tag[2] !== 'undefined') { tags.push(tag[2]); }
 	}
@@ -568,7 +567,7 @@ class Loader {
 
 // Begin modifying page
 function loaded() {
-	console.log ("==> DOM is loaded.", new Date() );
+	console.log ("==> DOM is loaded.");
 
 	// If content is blank
 	var content = document.querySelector('body > div');
@@ -632,7 +631,6 @@ function loaded() {
 				titleDest = items[k].querySelector('a'),
 				title = titleDest.textContent;
 			processDescription(desc, descDest, title, titleDest);
-			console.log(title);
 
 			k++;
 			spin.setCount(k);
@@ -643,7 +641,6 @@ function loaded() {
 				 for(i = 0; i < items.length; i++) {
 					items[i].setAttribute('data-title', items[i].querySelector('a').textContent);
 				 }
-				console.log('descriptions done');
 				spin.hide();
 			}
 		}
@@ -846,16 +843,15 @@ function loaded() {
 
 		// Keypress handler
 		function setKeybinds() {
-			// Prevent Default Spacebar Function
 			window.addEventListener('keydown', (e) => {
-				if(e.keyCode == 32) {
-				e.preventDefault();
+				let k = e.key.toLowerCase();
+				if(e.key === ' ') {
+					e.preventDefault();
 				}
 			});
 
 			window.addEventListener('keyup', (e) => {
 				let k = e.key.toLowerCase();
-                console.log(k);
 				let ctrl = e.ctrlKey;
 
                 let time = 5.0;
@@ -950,7 +946,6 @@ function loaded() {
 			function audioLoaded() {
 				audio = document.querySelector('audio');
 				if(audio !== null && audio.getAttribute('src') !== null) {
-					console.log('==> audio loaded');
 					// observer.disconnect();
 					addDownload();
 					setKeybinds();
@@ -971,5 +966,5 @@ function loaded() {
 }
 
 function fullyloaded () {
-	console.log ("==> Page is fully loaded, including images.", new Date() );
+	console.log ("==> Page is fully loaded, including images." );
 }
