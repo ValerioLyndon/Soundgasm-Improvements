@@ -4,6 +4,9 @@
 // @version     0.14
 // @description Restyles and adds new functionality to Soundgasm --- dark mode/keyboard shortcuts/quick download/and more
 // @author      Valerio Lyndon
+// @homepageURL https://github.com/ValerioLyndon/Soundgasm-Improvements
+// @supportURL  https://github.com/ValerioLyndon/Soundgasm-Improvements/issues
+// @license     GPL-3.0-only
 // @match       https://soundgasm.net/*
 // @run-at      document-start
 // @grant       GM_getValue
