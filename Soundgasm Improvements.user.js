@@ -373,109 +373,247 @@ document.documentElement.appendChild(css);
 
 // Functions & Classes
 
-function processDescription(desc, descDest, title, titleDest) {
-	var originalTitle = title;
-	var originalDesc = desc;
-	var processedTitleDiv = document.createElement('span');
-	var rawTitleDiv = document.createElement('span');
-	var processedDescDiv = document.createElement('div');
-	var rawDescDiv = document.createElement('p');
-	var tagsDiv = document.createElement('div');
-	var descDiv = document.createElement('p');
-	var tags = new Set();
-	// match all words inside brackets [] {}. also matches parentheses () but only for one-word sections to try and avoid false positives
-	const extractTagsRegex = /[\[\{](.*?)[\]\}]|\(([^\s]+)\)/g;
-	// same as the extraction regex but with extra whitespace matching rules
-	const removeTagsRegex = /\s*(?:[\[\{].*?[\]\}]|\([^\s]+\))\s*/g;
+class AudioListing {
+	constructor({ element, titleSelector, descriptionSelector, playCountSelector = false, order = 0 }){
+		// Process description
+		let titleDestination = element.querySelector(titleSelector);
+		let descDestination = element.querySelector(descriptionSelector);
+		let desc = descDestination.textContent;
+		let title = titleDestination.textContent;
+		let originalTitle = title;
+		let originalDesc = desc;
+		let processedTitleDiv = document.createElement('span');
+		let rawTitleDiv = document.createElement('span');
+		let processedDescDiv = document.createElement('div');
+		let rawDescDiv = document.createElement('p');
+		let tagsDiv = document.createElement('div');
+		let descDiv = document.createElement('p');
+		let tags = new Set();
+		// match all words inside brackets [] {}. also matches parentheses () but only for one-word sections to try and avoid false positives
+		const extractTagsRegex = /[\[\{](.*?)[\]\}]|\(([^\s]+)\)/g;
+		// same as the extraction regex but with extra whitespace matching rules
+		const removeTagsRegex = /\s*(?:[\[\{].*?[\]\}]|\([^\s]+\))\s*/g;
 
-	rawTitleDiv.textContent = title;
-	rawTitleDiv.style.display = 'none';
+		rawTitleDiv.textContent = title;
+		rawTitleDiv.style.display = 'none';
 
-	processedDescDiv.classList.add('vl-desc-container');
-	tagsDiv.classList.add('vl-tags');
-	descDiv.classList.add('vl-desc-new');
-	processedDescDiv.appendChild(tagsDiv);
-	processedDescDiv.appendChild(descDiv);
+		processedDescDiv.classList.add('vl-desc-container');
+		tagsDiv.classList.add('vl-tags');
+		descDiv.classList.add('vl-desc-new');
+		processedDescDiv.appendChild(tagsDiv);
+		processedDescDiv.appendChild(descDiv);
 
-	rawDescDiv.classList.add('vl-desc-raw');
-	rawDescDiv.textContent = desc;
-	rawDescDiv.style.display = 'none';
+		rawDescDiv.classList.add('vl-desc-raw');
+		rawDescDiv.textContent = desc;
+		rawDescDiv.style.display = 'none';
 
-	combined = title + desc;
-	var tagMatches = combined.matchAll(extractTagsRegex);
+		let combined = title + desc;
+		var tagMatches = combined.matchAll(extractTagsRegex);
 
-	for( let match of tagMatches ){
-		let tag = match[1] === undefined ? match[2] : match[1];
-		
-		if( tag.length > 0 ){
-			tags.add(tag);
+		for( let match of tagMatches ){
+			let tag = match[1] === undefined ? match[2] : match[1];
+			
+			if( tag.length > 0 ){
+				tags.add(tag);
+			}
+		}
+
+		// remove tags from text
+		title = title.replaceAll(removeTagsRegex, '')
+		desc = desc.replaceAll(removeTagsRegex, '')
+
+		// sort the tags by length
+		tags = Array.from(tags);
+		tags.sort( (a, b) => { return a.length - b.length; } );
+
+		// create the element
+		for( let i = 0; i < tags.length; i++ ){
+			var tagSpan = document.createElement('span');
+			tagSpan.classList.add('vl-tag');
+			tagSpan.textContent = tags[i];
+			tagsDiv.appendChild(tagSpan);
+		}
+
+		// Create "view raw" button
+		var viewRawBtn = document.createElement('a');
+		viewRawBtn.href = '#';
+		viewRawBtn.classList.add('vl-showraw');
+		viewRawBtn.textContent = 'Show raw.'
+		viewRawBtn.onclick = ()=>{
+			if( processedDescDiv.style.display === 'none' ){
+				processedTitleDiv.style.display = 'inline';
+				rawTitleDiv.style.display = 'none';
+				processedDescDiv.style.display = 'block';
+				rawDescDiv.style.display = 'none';
+				viewRawBtn.textContent = 'Show raw.';
+			} else {
+				processedTitleDiv.style.display = 'none';
+				rawTitleDiv.style.display = 'inline';
+				processedDescDiv.style.display = 'none';
+				rawDescDiv.style.display = 'block';
+				viewRawBtn.textContent = 'Show processed.';
+			}
+		}
+
+		// finish up with tags & description
+		descDiv.textContent = desc.trim();
+		processedTitleDiv.textContent = title.trim();
+
+		// Add everything back to DOM unless it is identical
+		if( title !== originalTitle || desc !== originalDesc ){
+			titleDestination.replaceChildren(processedTitleDiv, rawTitleDiv);
+			descDestination.replaceChildren(processedDescDiv, rawDescDiv, viewRawBtn);
+		}
+
+		// parse play count and change html
+		let plays = false;
+		if( playCountSelector ){
+			let playElement = element.querySelector(playCountSelector);
+			plays = playElement.textContent.split(': ')[1];
+
+			let playText = String(plays);
+			if( plays.length > 3 ) {
+				playElement.title = `played ${plays} times`;
+				playText = playText.substring(0, plays.length - 3) + 'k';
+			}
+			playElement.textContent = playText;
+		}
+
+		// Assign variables for use in AudioDirectory classes
+		this.element = element;
+		this.title = title;
+		this.description = desc;
+		this.plays = plays;
+		this.order = order;
+	}
+}
+
+class AudioDirectory {
+	constructor({ elements, titleSelector, descriptionSelector, playCountSelector = false, filterElement = false }){
+		this.audios = [];
+
+		// Add custom descriptions
+		for( let index = 0; index < elements.length; index++ ){
+			this.audios.push(new AudioListing({
+				element: elements[index],
+				titleSelector: titleSelector,
+				descriptionSelector: descriptionSelector,
+				playCountSelector: playCountSelector,
+				order: index
+			}));
+		}
+		console.log(this.audios);
+
+		// Add filters
+		// var sidebarAnchor = document.createElement('div'),
+		// 	sidebar = document.createElement('div');
+
+		// sidebarAnchor.id = 'sidebar-anchor';
+		// sidebarAnchor.style.position = 'relative';
+		// sidebarAnchor.appendChild(sidebar);
+
+		// sidebar.classList.add('vl-sidebar');
+		// sidebar.textContent = 'Filter by tag';
+
+		// document.body.insertBefore(sidebarAnchor, document.querySelector('.sound-details'));
+
+		// intialise sorting
+		if( filterElement ){
+			this.filterElement = filterElement;
+			this.calculatedSorts = {};
+			this.sortButtons = {};
+
+			this.createSortButton('Title', 'title', 'ascending');
+			this.createSortButton('Play Count', 'plays', 'descending');
+			this.createSortButton('Date', 'order', 'descending');
+
+			this.sort();
 		}
 	}
 
-	// remove tags from text
-	title = title.replaceAll(removeTagsRegex, '')
-	desc = desc.replaceAll(removeTagsRegex, '')
+	createSortButton( title, column, direction ){
+		let button = document.createElement('a');
+		button.href = 'javascript:void(0);';
+		button.textContent = title;
+		button.dataset.column = column;
+		button.dataset.direction = direction;
 
-	// sort the tags by length
-	tags = Array.from(tags);
-	tags.sort( (a, b) => { return a.length - b.length; } );
-
-	// create the element
-	for( let i = 0; i < tags.length; i++ ){
-		var tagSpan = document.createElement('span');
-		tagSpan.classList.add('vl-tag');
-		tagSpan.textContent = tags[i];
-		tagsDiv.appendChild(tagSpan);
+		button.onclick = ()=>{
+			this.sort(column, direction);
+		};
+		this.filterElement.appendChild(button);
+		this.sortButtons[column] = button;
+		return button;
 	}
 
-	// Create "view raw" button
-	var viewRawBtn = document.createElement('a');
-	viewRawBtn.href = '#';
-	viewRawBtn.classList.add('vl-showraw');
-	viewRawBtn.textContent = 'Show raw.'
-	viewRawBtn.onclick = function() {
-		if(processedDescDiv.style.display === 'none') {
-			processedTitleDiv.style.display = 'inline';
-			rawTitleDiv.style.display = 'none';
-			processedDescDiv.style.display = 'block';
-			rawDescDiv.style.display = 'none';
-			viewRawBtn.textContent = 'Show raw.';
-		} else {
-			processedTitleDiv.style.display = 'none';
-			rawTitleDiv.style.display = 'inline';
-			processedDescDiv.style.display = 'none';
-			rawDescDiv.style.display = 'block';
-			viewRawBtn.textContent = 'Show processed.';
+	sort( column = 'order', direction = 'descending' ){
+		// flip direction if already sorting this way
+		if( this?.sorted?.column === column && this?.sorted?.direction === direction ){
+			direction = direction === 'descending' ? 'ascending' : 'descending';
+		}
+
+		this.sorted = { column, direction };
+
+		for( let button of Object.values(this.sortButtons) ){
+			if( button.dataset.column === column ){
+				button.classList.add('active');
+				button.dataset.direction = direction;
+			}
+			else {
+				button.classList.remove('active');
+			}
+		}
+
+		// if list was already sorted once, just re-use the previous sort
+		let array = [];
+		if( `${column}-${direction}` in this.calculatedSorts ){
+			array = this.calculatedSorts[`${column}-${direction}`];
+		}
+
+		// if not sorted yet, choose correct function and sort
+		else {
+			// 'order' column gets sorted in reverse due to being front-facingly labelled as date
+			let sortFunction = () => { throw new Error('unknown sort'); };
+			if( column === 'plays' && direction === 'ascending'
+			|| column === 'order' && direction === 'descending' ){
+				sortFunction = (first, second) => { return first['value'] - second['value']; };
+			}
+			else if( column === 'plays' && direction === 'descending'
+			|| column === 'order' && direction === 'ascending' ){
+				sortFunction = (first, second) => { return second['value'] - first['value']; };
+			}
+			else if( column === 'title' && direction === 'ascending' ){
+				sortFunction = (first, second) => {
+					let a = first['value'];
+					let b = second['value'];
+					return (a < b) ? -1 : (a > b) ? 1 : 0;
+				};
+			}
+			else if( column === 'title' && direction === 'descending' ){
+				sortFunction = (first, second) => {
+					let a = first['value'].toLowerCase();
+					let b = second['value'].toLowerCase();
+					return (b < a) ? -1 : (b > a) ? 1 : 0;
+				};
+			}
+
+			for( let audio of this.audios ){
+				array.push({'element': audio.element, 'value': audio[column]});
+			}
+			array.sort(sortFunction);
+
+			this.calculatedSorts[`${column}-${direction}`] = array;
+		}
+
+		// apply sort to items using CSS 'order' values
+		for( let i = 0; i < array.length; i++ ){
+			array[i]['element'].style.order = i;
 		}
 	}
-
-	// finish up with tags & description
-
-	descDiv.textContent = desc.trim();
-	processedTitleDiv.textContent = title.trim();
-
-	if(title === originalTitle && desc === originalDesc) {
-		return false;
-	}
-
-	// Add everything back to DOM
-	//destination.innerHMTL = ""; <-- this doesn't work for some reason so instead we use a while loop
-	while(descDest.firstChild){
-		descDest.removeChild(descDest.firstChild);
-	}
-	while(titleDest.firstChild){
-		titleDest.removeChild(titleDest.firstChild);
-	}
-
-	titleDest.appendChild(processedTitleDiv);
-	titleDest.appendChild(rawTitleDiv);
-
-	descDest.appendChild(processedDescDiv);
-	descDest.appendChild(rawDescDiv);
-	descDest.appendChild(viewRawBtn);
 }
 
 // Begin modifying page
+
 function domLoaded() {
 	console.log ("==> DOM is loaded.");
 
@@ -517,206 +655,36 @@ function domLoaded() {
 	}
 
 	// user page
-	if(path.startsWith('/u/') && path.split('/').length < 4) {
-		var items = document.querySelectorAll('.sound-details');
-
-		// Add custom descriptions
-		var descriptions = document.querySelectorAll('.sound-details');
-		for(i = 0; i < descriptions.length; i++) {
-			let descDest = descriptions[i].querySelector('.soundDescription');
-			let desc = descDest.textContent;
-			let titleDest = descriptions[i].querySelector('a');
-			let title = titleDest.textContent;
-			processDescription(desc, descDest, title, titleDest);
-		}
-
-		// Modify playcounts & add sort data
-		for(i = 0; i < items.length; i++) {
-			var item = items[i],
-				title = item.querySelector('a').textContent,
-				countEle = item.querySelector('.playCount');
-
-			item.setAttribute('data-order', i);
-			item.setAttribute('data-title', title);
-
-			var count = countEle.textContent.split(': ')[1];
-			item.setAttribute('data-count', count);
-			if(count.length > 3) {
-				//count = count.substr(0, count.length - 3) + ',' + count.substr(count.length - 3, 3);
-				count = count.substr(0, count.length - 3) + 'k';
-			}
-			countEle.textContent = count;
-		}
-
-		// Prep for sort columns
-
+	if( path.startsWith('/u/') && path.split('/').length < 4 ){
+		// Prep DOM for filters
 		document.body.style.display = "flex";
 		document.body.style.flexDirection = "column";
 		document.querySelector('header').style.order = '-1';
 		document.querySelector('footer').style.order = '99999';
 
-		// Add sort columns
-
-		var sortHeader = document.createElement('div');
-		sortHeader.classList.add('vl-sortheader');
-		sortHeader.textContent = 'Sort by: ';
-
-		function addSortBtn(title, defaultDirection = 'desc') {
-			var ele = document.createElement('a');
-			ele.href = '#';
-			ele.setAttribute('data-direction', defaultDirection);
-			ele.textContent = title;
-			sortHeader.appendChild(ele);
-			return ele;
-		}
-
-		function sortByTitle() {
-			var btns = document.querySelectorAll('.vl-sortheader a');
-			for(i = 0; i < btns.length; i++) {
-				btns[i].classList.remove('active');
-			}
-			titleBtn.classList.add('active');
-
-			direction = titleBtn.getAttribute('data-direction');
-			if(direction === 'desc') {
-				titleBtn.setAttribute('data-direction', 'asc');
-			} else {
-				titleBtn.setAttribute('data-direction', 'desc');
-			}
-			direction = titleBtn.getAttribute('data-direction');
-
-			var array = [];
-			for(i = 0; i < items.length; i++) {
-				var order = items[i].getAttribute('data-order'),
-					title = items[i].getAttribute('data-title');
-				array.push([order, title]);
-			}
-			array.sort( (first, second) => {
-				var a = first[1].toUpperCase(),
-					b = second[1].toUpperCase();
-				return (a < b) ? -1 : (a > b) ? 1 : 0;
-			} );
-
-			if(direction === 'asc') {
-				for(i = 0; i < array.length; i++) {
-					var item = document.querySelector('[data-order="'+array[i][0]+'"]');
-					item.style.order = i;
-				}
-			} else {
-				for(i = 0; i < array.length; i++) {
-					var item = document.querySelector('[data-order="'+array[i][0]+'"]');
-					item.style.order = array.length - i;
-				}
-			}
-		}
-		titleBtn = addSortBtn('Title', 'desc');
-		titleBtn.onclick = sortByTitle;
-
-		function sortByCount() {
-			var btns = document.querySelectorAll('.vl-sortheader a');
-			for(i = 0; i < btns.length; i++) {
-				btns[i].classList.remove('active');
-			}
-			countBtn.classList.add('active');
-
-			direction = countBtn.getAttribute('data-direction');
-			if(direction === 'desc') {
-				countBtn.setAttribute('data-direction', 'asc');
-			} else {
-				countBtn.setAttribute('data-direction', 'desc');
-			}
-			direction = countBtn.getAttribute('data-direction');
-
-			var array = [];
-			for(i = 0; i < items.length; i++) {
-				var order = items[i].getAttribute('data-order'),
-					count = items[i].getAttribute('data-count');
-				array.push([order, count]);
-			}
-			array.sort( (first, second) => { return first[1] - second[1] } );
-
-			if(direction === 'asc') {
-				for(i = 0; i < array.length; i++) {
-					var item = document.querySelector('[data-order="'+array[i][0]+'"]');
-					item.style.order = i;
-				}
-			} else {
-				for(i = 0; i < array.length; i++) {
-					var item = document.querySelector('[data-order="'+array[i][0]+'"]');
-					item.style.order = array.length - i;
-				}
-			}
-		}
-		countBtn = addSortBtn('Play Count', 'asc');
-		countBtn.onclick = sortByCount;
-
-		function sortByDate() {
-			var btns = document.querySelectorAll('.vl-sortheader a');
-			for(i = 0; i < btns.length; i++) {
-				btns[i].classList.remove('active');
-			}
-			dateBtn.classList.add('active');
-
-			direction = dateBtn.getAttribute('data-direction');
-			if(direction === 'desc') {
-				dateBtn.setAttribute('data-direction', 'asc');
-			} else {
-				dateBtn.setAttribute('data-direction', 'desc');
-			}
-			direction = dateBtn.getAttribute('data-direction');
-
-			if(direction === 'asc') {
-				for(i = 0; i < items.length; i++) {
-					items[i].style.order = items.length - items[i].getAttribute('data-order');
-				}
-			} else {
-				for(i = 0; i < items.length; i++) {
-					items[i].style.order = items[i].getAttribute('data-order');
-				}
-			}
-		}
-		dateBtn = addSortBtn('Date Uploaded', 'desc');
-		dateBtn.onclick = sortByDate;
-
-		function clearSort() {
-			var btns = document.querySelectorAll('.vl-sortheader a');
-			for(i = 0; i < btns.length; i++) {
-				btns[i].classList.remove('active');
-			}
-
-			for(i = 0; i < items.length; i++) {
-				items[i].style.order = "";
-			}
-		}
-		clearBtn = addSortBtn('clear');
-		clearBtn.onclick = clearSort;
-		clearBtn.classList.add('vl-clearbtn');
-
-		document.body.insertBefore(sortHeader, document.querySelector('.sound-details'));
-
-		// Add filters
-//		 var sidebarAnchor = document.createElement('div'),
-//			 sidebar = document.createElement('div');
-
-//		 sidebarAnchor.id = 'sidebar-anchor';
-//		 sidebarAnchor.style.position = 'relative';
-//		 sidebarAnchor.appendChild(sidebar);
-
-//		 sidebar.classList.add('vl-sidebar');
-//		 sidebar.textContent = 'Filter by tag';
-
-//		 document.body.insertBefore(sidebarAnchor, document.querySelector('.sound-details'));
-
+		var filterElement = document.createElement('div');
+		filterElement.classList.add('vl-sortheader');
+		filterElement.textContent = 'Sort by: ';
+		document.body.insertBefore(filterElement, document.querySelector('.sound-details'));
+		
+		// Process audio listings
+		new AudioDirectory({
+			elements: document.querySelectorAll('.sound-details'),
+			titleSelector: 'a',
+			descriptionSelector: '.soundDescription',
+			playCountSelector: '.playCount',
+			filterElement: filterElement
+		});
 	}
 
 	// player page
-	if(path.startsWith('/u/') && path.split('/').length > 3) {
+	if( path.startsWith('/u/') && path.split('/').length > 3 ){
 		// Add custom descriptions
-		var desc = document.querySelector('.jp-description p').textContent,
-			descDest = document.querySelector('.jp-description'),
-			titleDest = document.querySelector('.jp-title'),
-			title = titleDest.textContent;
-		processDescription(desc, descDest, title, titleDest);
+		new AudioListing({
+			element: document.querySelector('.jp-type-single'),
+			titleSelector: '.jp-title',
+			descriptionSelector: '.jp-description'
+		});
 
 		// basic variables
 		var play = document.querySelector('.jp-play'),
