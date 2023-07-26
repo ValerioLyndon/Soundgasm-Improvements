@@ -18,7 +18,7 @@
 // 		preload();
 // 	}
 // }
-document.addEventListener ("DOMContentLoaded", loaded);
+document.addEventListener ("DOMContentLoaded", domLoaded);
 window.addEventListener ("load", fullyloaded);
 
 // Dark or Light mode
@@ -569,7 +569,7 @@ class Loader {
 }
 
 // Begin modifying page
-function loaded() {
+function domLoaded() {
 	console.log ("==> DOM is loaded.");
 
 	// If content is blank
