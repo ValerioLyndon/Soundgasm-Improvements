@@ -57,8 +57,9 @@ css.textContent = `
 	}
 
 	html body {
+		min-width: 424rem;
 		max-width: 800rem;
-		padding: 40rem;
+		padding: 40rem 20rem;
 		margin: 0 auto;
 		background: var(--background);
 		font-size: 12rem;
@@ -147,22 +148,23 @@ css.textContent = `
 
 	body .sound-details {
 		display: flex;
-		width: 620rem;
+		width: calc(100% - 20rem);
+		max-width: 620rem;
+		padding: 10rem;
 		border-radius: 4rem;
-		//margin: 0 0 12rem;
 		margin: 0 auto 12rem;
 		flex-flow: row wrap;
 	}
 
 	.sound-details > a {
-		max-width: calc(100% - 70px);
+		max-width: calc(100% - 70rem);
 		font-size: 16rem;
 		font-weight: bold;
 		white-space: normal;
 	}
 
 	.playCount {
-		max-width: 70px;
+		max-width: 70rem;
 		margin-left: auto;
 		text-align: right;
 	}
@@ -206,12 +208,6 @@ css.textContent = `
 		display: block;
 		color: var(--text-low);
 		font-size: 10px;
-	}
-	.vl-clearbtn {
-		display: none;
-	}
-	.active ~ .vl-clearbtn {
-		display: inline-block;
 	}
 
 	/* Sidebar */
@@ -292,6 +288,10 @@ css.textContent = `
 		100% {
 			opacity: 0.3;
 		}
+	}
+
+	.jp-gui .jp-volume-controls {
+		width: 0;
 	}
 
 	.dark .jp-current-time, .dark .jp-duration {
