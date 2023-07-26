@@ -367,54 +367,6 @@ css.textContent = `
 	.vl-footer a {
 		padding: 0 15rem;
 	}
-
-	/* Loading Spinner */
-
-	.vl-loader-parent {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		width: 100%;
-		padding: 6px;
-		box-sizing: border-box;
-	}
-
-	.vl-loader {
-		display: flex;
-		height: 40px;
-		padding: 0 12px;
-		border-radius: 10px;
-		background: var(--foreground-1);
-		box-shadow:
-			0 1rem 4rem var(--background),
-			0 2rem 10rem hsla(0,0%,0%,10%);
-		justify-content: center;
-		align-items: center;
-		float: right;
-	}
-
-	.vl-loader-icon {
-		width: 16px;
-		height: 16px;
-		border: 3px solid transparent;
-		border-left-color: var(--text-low);
-		border-top-color: var(--text-low);
-		border-radius: 50%;
-		animation: 1s cubic-bezier(.54,.39,.45,.63) 0s infinite spin;
-	}
-
-	.vl-loader-text {
-		white-space: nowrap;
-		margin: 0 6px;
-	}
-
-	@keyframes spin {
-		from {
-			transform: rotate(30deg);
-		} to {
-			transform: rotate(390deg);
-		}
-	}
 `;
 
 document.documentElement.appendChild(css);
@@ -523,50 +475,6 @@ function processDescription(desc, descDest, title, titleDest) {
 	descDest.appendChild(viewRawBtn);
 }
 
-class Loader {
-	constructor(description = "Loading...", total = null) {
-		this.desc = description;
-		this.count = 0;
-		this.total = total;
-
-		this.container = document.querySelector('.vl-loader-parent');
-		if(this.container === null) {
-			this.container = document.createElement('div');
-			this.container.classList.add('vl-loader-parent');
-		}
-		document.body.appendChild(this.container);
-
-		this.element = document.createElement('div');
-		this.element.classList.add('vl-loader');
-		this.element.innerHTML = `<div class="vl-loader-icon"></div> <span class="vl-loader-text">${this.desc}</span>`;
-		this.container.appendChild(this.element);
-	}
-
-	enableCounter() {
-		this.counter = document.createElement('span');
-		this.counter.classList.add('vl-loader-count');
-		this.element.appendChild(this.counter);
-		this.refreshCounter();
-	}
-
-	refreshCounter() {
-		this.counter.innerText = `${this.count} of ${this.total}`;
-	}
-
-	setCount(count) {
-		this.count = count;
-		this.refreshCounter();
-	}
-
-	show() {
-		this.element.style.display = 'block';
-	}
-
-	hide() {
-		this.element.style.display = 'none';
-	}
-}
-
 // Begin modifying page
 function domLoaded() {
 	console.log ("==> DOM is loaded.");
@@ -612,41 +520,15 @@ function domLoaded() {
 	if(path.startsWith('/u/') && path.split('/').length < 4) {
 		var items = document.querySelectorAll('.sound-details');
 
-		// Add loading spinner
-		var spin = new Loader('Processing descriptions...', items.length);
-		spin.enableCounter();
-
 		// Add custom descriptions
-		// var descriptions = document.querySelectorAll('.sound-details');
-		// for(i = 0; i < descriptions.length; i++) {
-		//	 var descDest = descriptions[i].querySelector('.soundDescription'),
-		//		 desc = descDest.textContent,
-		//		 titleDest = descriptions[i].querySelector('a'),
-		//		 title = titleDest.textContent;
-		//	 processDescription(desc, descDest, title, titleDest);
-		// }
-		var k = 0;
-		// slowly feeds descriptions into process because otherwise the browser likes to crash. I have a feeling I coded this wrong.
-		function feedDesc() {
-			var descDest = items[k].querySelector('.soundDescription'),
-				desc = descDest.textContent,
-				titleDest = items[k].querySelector('a'),
-				title = titleDest.textContent;
+		var descriptions = document.querySelectorAll('.sound-details');
+		for(i = 0; i < descriptions.length; i++) {
+			let descDest = descriptions[i].querySelector('.soundDescription');
+			let desc = descDest.textContent;
+			let titleDest = descriptions[i].querySelector('a');
+			let title = titleDest.textContent;
 			processDescription(desc, descDest, title, titleDest);
-
-			k++;
-			spin.setCount(k);
-			if(k < items.length) {
-				timer = k * 3 < 200 ? k * 7 : 200;
-				setTimeout(feedDesc, timer);
-			} else {
-				 for(i = 0; i < items.length; i++) {
-					items[i].setAttribute('data-title', items[i].querySelector('a').textContent);
-				 }
-				spin.hide();
-			}
 		}
-		feedDesc();
 
 		// Modify playcounts & add sort data
 		for(i = 0; i < items.length; i++) {
