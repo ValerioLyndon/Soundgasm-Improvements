@@ -13,13 +13,8 @@
 // @grant       GM_setValue
 // ==/UserScript==
 
-// document.onreadystatechange = function () {
-// 	if (document.readyState === 'interactive') {
-// 		preload();
-// 	}
-// }
-document.addEventListener ("DOMContentLoaded", domLoaded);
-window.addEventListener ("load", fullyloaded);
+document.addEventListener("DOMContentLoaded", domLoaded);
+window.addEventListener("load", fullyloaded);
 
 // Dark or Light mode
 
@@ -28,8 +23,7 @@ document.documentElement.classList.add(theme);
 
 // CSS
 
-var css = document.createElement('style');
-
+const css = document.createElement('style');
 css.textContent = `
 	html {
 		font-size: 1px;
@@ -428,14 +422,19 @@ document.documentElement.appendChild(css);
 // Functions & Classes
 
 function processDescription(desc, descDest, title, titleDest) {
-	var originalTitle = title,
-		originalDesc = desc,
-		processedTitleDiv = document.createElement('span'),
-		rawTitleDiv = document.createElement('span'),
-		processedDescDiv = document.createElement('div'),
-		rawDescDiv = document.createElement('p'),
-		tagsDiv = document.createElement('div'),
-		descDiv = document.createElement('p');
+	var originalTitle = title;
+	var originalDesc = desc;
+	var processedTitleDiv = document.createElement('span');
+	var rawTitleDiv = document.createElement('span');
+	var processedDescDiv = document.createElement('div');
+	var rawDescDiv = document.createElement('p');
+	var tagsDiv = document.createElement('div');
+	var descDiv = document.createElement('p');
+	var tags = new Set();
+	// match all words inside brackets [] {}. also matches parentheses () but only for one-word sections to try and avoid false positives
+	const extractTagsRegex = /[\[\{](.*?)[\]\}]|\(([^\s]+)\)/g;
+	// same as the extraction regex but with extra whitespace matching rules
+	const removeTagsRegex = /\s*(?:[\[\{].*?[\]\}]|\([^\s]+\))\s*/g;
 
 	rawTitleDiv.textContent = title;
 	rawTitleDiv.style.display = 'none';
@@ -450,27 +449,27 @@ function processDescription(desc, descDest, title, titleDest) {
 	rawDescDiv.textContent = desc;
 	rawDescDiv.style.display = 'none';
 
-	// match regex and iterate matches into an array
 	combined = title + desc;
-	var tagIterator = combined.matchAll(/(?:[\[\{](.*?)[\]\}]|\(([^\s]+)\))/g);
-    /* todo: comment this regex because it's an abomination */
+	var tagMatches = combined.matchAll(extractTagsRegex);
 
-	// todo: remove duplicates
-	tags = [];
-	for(tag of tagIterator) {
-		if(typeof tag[1] !== 'undefined') { tags.push(tag[1]); }
-		else if(typeof tag[2] !== 'undefined') { tags.push(tag[2]); }
+	for( let match of tagMatches ){
+		let tag = match[1] === undefined ? match[2] : match[1];
+		
+		if( tag.length > 0 ){
+			tags.add(tag);
+		}
 	}
 
 	// remove tags from text
-	title = title.replace(/(?:\s|^|)*(?:[\[\{].*?[\]\}]|\([^\s]+\))(?:\s|$|)*/g, '')
-	desc = desc.replace(/(?:\s|^|)*(?:[\[\{].*?[\]\}]|\([^\s]+\))(?:\s|$|)*/g, '')
+	title = title.replaceAll(removeTagsRegex, '')
+	desc = desc.replaceAll(removeTagsRegex, '')
 
-	// sort by length
+	// sort the tags by length
+	tags = Array.from(tags);
 	tags.sort( (a, b) => { return a.length - b.length; } );
 
 	// create the element
-	for(i = 0; i < tags.length; i++) {
+	for( let i = 0; i < tags.length; i++ ){
 		var tagSpan = document.createElement('span');
 		tagSpan.classList.add('vl-tag');
 		tagSpan.textContent = tags[i];
