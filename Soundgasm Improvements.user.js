@@ -59,7 +59,7 @@ css.textContent = `
 
 	html body {
 		min-width: 424rem;
-		max-width: 800rem;
+		max-width: 1200rem;
 		padding: 40rem 20rem;
 		margin: 0 auto;
 		background: var(--background);
@@ -145,12 +145,33 @@ css.textContent = `
 		border-color: var(--border);
 	}
 
+	.vl-column {
+		display: flex;
+		flex-flow: column nowrap;
+		gap: 5rem 10rem;
+		margin-bottom: 5rem;
+		align-items: start;
+	}
+
+	.vl-row {
+		display: flex;
+		flex-flow: row wrap;
+		gap: 10rem 5rem;
+		margin-bottom: 5rem;
+		align-items: start;
+	}
+
+	.vl-paragraph {
+		margin: 0 0 5rem;
+		font-size: 12rem;
+		line-height: 1.35;
+	}
+
 	/* User Page */
 
 	body .sound-details {
 		display: flex;
-		width: calc(100% - 20rem);
-		max-width: 620rem;
+		width: calc(100% - 22rem);
 		padding: 10rem;
 		border-radius: 4rem;
 		margin: 0 auto 12rem;
@@ -187,39 +208,95 @@ css.textContent = `
 		margin-top: 6rem;
 	}
 
-	/* Sort Header */
+	/* Split Content + Sidebar */
 
-	.vl-sortheader {
-		height: 20rem;
-		margin-bottom: 25rem;
-		text-align: center;
+	.vl-split {
+		display: grid;
+		max-width: calc(640rem + 20rem + 240rem);
+		gap: 20rem;
+		margin: 0 auto;
+	}
+	@media (max-width: 901px) {
+		.vl-split {
+			grid-auto-flow: row;
+		}
+	}
+	@media (min-width: 900px) {
+		.vl-split {
+			grid-auto-flow: column;
+			align-items: start;
+		}
 	}
 
-	.vl-sortheader a {
-		display: inline-block;
-		padding: 0 15rem;
-		vertical-align: top;
+	.vl-directory {
+		display: grid;
+		width: 100vw;
+		max-width: 620rem;
+		grid-auto-flow: row;
 	}
-
-	.vl-sortheader a.active {
-		font-weight: bold;
-	}
-	.vl-sortheader a.active::after {
-		content: attr(data-direction);
-		display: block;
-		color: var(--text-low);
-		font-size: 10px;
-	}
-
-	/* Sidebar */
 
 	.vl-sidebar {
-		position: absolute;
-		right: 0;
-		top: 0;
-		width: 120rem;
 		padding: 10rem;
 		border-radius: 4rem;
+	}
+	@media (max-width: 901px) {
+		.vl-sidebar {
+			border: 1px solid var(--border);
+		}
+	}
+	@media (min-width: 900px) {
+		.vl-sidebar {
+			position: sticky;
+			top: 20rem;
+			width: 220rem;
+			order: 1;
+		}
+	}
+
+	/* Filters */
+
+	.vl-hidden-by-search,
+	.vl-hidden-by-tag {
+		display: none !important;
+	}
+
+	.vl-filters {
+		font-size: 14rem;
+	}
+
+	.vl-filter-section {
+		margin-bottom: 15rem;
+	}
+
+	.vl-filter-header {
+		border-bottom: 1rem solid var(--border);
+		line-height: 1.25em;
+		margin: 0 0 5rem;
+		font-size: 1em;
+		font-weight: bold;
+	}
+
+	.vl-sort-btn::before {
+		content: "• ";
+	}
+
+	.vl-sort-btn.is-active {
+		font-weight: bold;
+	}
+	.vl-sort-btn.is-active::after {
+		content: attr(data-direction);
+		color: var(--text-low);
+		font-size: 10rem;
+		margin-left: 5rem;
+	}
+
+	.vl-search {
+		border-radius: 3px;
+		margin: 0 0 5rem;
+	}
+
+	.vl-tag {
+
 	}
 
 	/* Player Page */
@@ -374,6 +451,13 @@ document.documentElement.appendChild(css);
 
 // Functions & Classes
 
+function paragraph( text ){
+	let p = document.createElement('p');
+	p.className = 'vl-paragraph';
+	p.textContent = text;
+	return p;
+}
+
 class AudioListing {
 	constructor({ element, titleSelector, descriptionSelector, playCountSelector = false, order = 0 }){
 		// Process description
@@ -486,27 +570,64 @@ class AudioListing {
 		this.description = desc;
 		this.plays = plays;
 		this.order = order;
+		this.tags = tags;
 	}
 }
 
 class AudioDirectory {
 	constructor({ elements, titleSelector, descriptionSelector, playCountSelector = false, filterElement = false }){
 		this.audios = [];
+		this.tags = {};
 
 		// Add custom descriptions
 		for( let index = 0; index < elements.length; index++ ){
-			this.audios.push(new AudioListing({
+			let audio = new AudioListing({
 				element: elements[index],
 				titleSelector: titleSelector,
 				descriptionSelector: descriptionSelector,
 				playCountSelector: playCountSelector,
 				order: index
-			}));
+			});
+			this.audios.push(audio);
+			for( let tag of audio.tags ){
+				if(!( tag in this.tags )){ this.tags[tag] = []; }
+				this.tags[tag].push(audio.element);
+			}
 		}
 
 		// intialise filters and sorting
 		if( filterElement ){
+			// set up DOM
 			this.filterElement = filterElement;
+			this.filterElement.classList.add('vl-filters');
+
+			this.sortElement = document.createElement('div');
+			this.sortElement.className = 'vl-filter-section';
+			this.searchElement = document.createElement('div');
+			this.searchElement.className = 'vl-filter-section';
+			this.tagElement = document.createElement('div');
+			this.tagElement.className = 'vl-filter-section';
+
+			let sortHeader = document.createElement('h6');
+			sortHeader.className = 'vl-filter-header';
+			sortHeader.textContent = 'Sort by...';
+			this.sortElement.append(sortHeader);
+
+			this.sortList = document.createElement('div');
+			this.sortList.className = 'vl-column';
+			this.sortElement.append(this.sortList);
+
+			let searchHeader = document.createElement('h6');
+			searchHeader.className = 'vl-filter-header';
+			searchHeader.textContent = 'Search...';
+			this.searchElement.append(searchHeader);
+
+			let tagHeader = document.createElement('h6');
+			tagHeader.className = 'vl-filter-header';
+			tagHeader.textContent = 'Filter by tag...';
+			this.tagElement.append(tagHeader);
+
+			// set up sorting
 			this.calculatedSorts = {};
 			this.sortButtons = {};
 
@@ -516,9 +637,24 @@ class AudioDirectory {
 
 			this.sort();
 
-			// todo: search
+			// set up search
+
+			this.searchBar = document.createElement('input');
+			this.searchBar.type = 'search';
+			this.searchBar.className = 'vl-search';
+			this.searchBar.placeholder = 'Include an exact phrase.';
+			this.searchElement.append(this.searchBar);
+			this.searchElement.append(paragraph(`Search supports some basic operators. For example: "phrase" to require an exact string or word and -word to excluse a word. Un-quoted words are treated as OR.`));
+
+			this.searchBar.addEventListener('input', ()=>{ this.search() });
+			this.searchTimeout = setTimeout(null, 0);
 
 			// todo: tag filters
+
+
+
+			// Append all workspace items to DOM
+			this.filterElement.append(this.sortElement, this.searchElement, this.tagElement);
 		}
 	}
 
@@ -526,13 +662,14 @@ class AudioDirectory {
 		let button = document.createElement('a');
 		button.href = 'javascript:void(0);';
 		button.textContent = title;
+		button.className = 'vl-sort-btn';
 		button.dataset.column = column;
 		button.dataset.direction = direction;
 
 		button.onclick = ()=>{
 			this.sort(column, direction);
 		};
-		this.filterElement.appendChild(button);
+		this.sortList.appendChild(button);
 		this.sortButtons[column] = button;
 		return button;
 	}
@@ -547,11 +684,11 @@ class AudioDirectory {
 
 		for( let button of Object.values(this.sortButtons) ){
 			if( button.dataset.column === column ){
-				button.classList.add('active');
+				button.classList.add('is-active');
 				button.dataset.direction = direction;
 			}
 			else {
-				button.classList.remove('active');
+				button.classList.remove('is-active');
 			}
 		}
 
@@ -601,6 +738,68 @@ class AudioDirectory {
 			array[i]['element'].style.order = i;
 		}
 	}
+
+	search( ){
+		clearTimeout(this.searchTimeout);
+
+		// parse query
+		const exclusionRegex = /(?:^|\s)+-(\w+)/g;
+		const phraseRegex = /"([^"]+)"/g;
+		let query = this.searchBar.value.toLowerCase();
+
+		let failMatches = query.matchAll(exclusionRegex);
+		let exclusions = Array.from(failMatches).map( match => match[1] );
+		query = query.replaceAll(exclusionRegex, '').trim();
+
+		let phraseMatches = query.matchAll(phraseRegex);
+		let phrases = Array.from(phraseMatches).map( match => match[1] );
+		query = query.replaceAll(phraseRegex, '').trim();
+
+		let words = query.split(' ');
+
+		this.searchTimeout = setTimeout(()=>{
+			for( let audio of this.audios ){
+				if( this.passesSearch(audio, phrases, words, exclusions) ){
+					audio.element.classList.remove('vl-hidden-by-search');
+				}
+				else {
+					audio.element.classList.add('vl-hidden-by-search');
+				}
+			}
+		}, 250);
+	}
+
+	passesSearch( audioListing, phrases, words, exclusions ){
+		console.log(phrases, words, exclusions);
+		const title = audioListing.title.toLowerCase();
+		const tags = audioListing.tags.join(' ').toLowerCase();
+		const any = title + tags;
+
+		// cannot match any exclusions
+		for( let str of exclusions ){
+			if( any.includes(str) ){
+				return false;
+			}
+		}
+
+		// must match all phrases
+		for( let phrase of phrases ){
+			if(! any.includes(phrase) ){
+				return false;
+			}
+		}
+
+		// can match any word
+		for( let word of words ){
+			if( any.includes(word) ){
+				return true;
+			}
+		}
+	}
+
+	filter( ){
+
+	}
 }
 
 // Begin modifying page
@@ -648,29 +847,22 @@ function domLoaded() {
 	// User pages
 	if( path.startsWith('/u/') && path.split('/').length < 4 ){
 		// Prep DOM for filters
+		let container = document.createElement('div');
+		container.className = 'vl-split';
+
+		let directory = document.createElement('main');
+		directory.className = 'vl-directory';
+		let sidebar = document.createElement('aside');
+		sidebar.className = 'vl-sidebar';
+
+		let frag = new DocumentFragment();
 		let items = document.querySelectorAll('.sound-details');
-		document.body.style.display = 'flex';
-		document.body.style.flexDirection = 'column';
-		document.querySelector('header').style.order = '-1';
-		document.querySelector('footer').style.order = '99999';
-
-		var filterElement = document.createElement('div');
-		filterElement.classList.add('vl-sortheader');
-		filterElement.textContent = 'Sort by: ';
-		document.body.insertBefore(filterElement, document.querySelector('.sound-details'));
-
-		// Add filters
-		// var sidebarAnchor = document.createElement('div'),
-		// 	sidebar = document.createElement('div');
-
-		// sidebarAnchor.id = 'sidebar-anchor';
-		// sidebarAnchor.style.position = 'relative';
-		// sidebarAnchor.appendChild(sidebar);
-
-		// sidebar.classList.add('vl-sidebar');
-		// sidebar.textContent = 'Filter by tag';
-
-		// document.body.insertBefore(sidebarAnchor, document.querySelector('.sound-details'));
+		for( let item of items ){
+			frag.append(item);
+		}
+		directory.append(frag);
+		container.append(sidebar, directory);
+		document.getElementsByTagName('footer')[0].insertAdjacentElement('beforebegin', container);
 		
 		// Process audio listings
 		new AudioDirectory({
@@ -678,7 +870,7 @@ function domLoaded() {
 			titleSelector: 'a',
 			descriptionSelector: '.soundDescription',
 			playCountSelector: '.playCount',
-			filterElement: filterElement
+			filterElement: sidebar
 		});
 	}
 
