@@ -249,6 +249,8 @@ css.textContent = `
 			position: sticky;
 			top: 20rem;
 			width: 220rem;
+			max-height: calc(100vh - 90rem);
+			overflow-y: auto;
 			order: 1;
 		}
 	}
@@ -295,8 +297,32 @@ css.textContent = `
 		margin: 0 0 5rem;
 	}
 
-	.vl-tag {
+	.vl-tag-btn {
+		display: inline-block;
+		padding: 2rem 4rem;
+		background: var(--foreground-2);
+		border: none;
+		border-radius: 2.5rem;
+		color: var(--text-medium);
+		font-size: 11rem;
+		text-transform: capitalize;
+		cursor: pointer;
+	}
+	.vl-tag-btn.is-active,
+	.vl-tag-btn:hover {
+		background: var(--foreground-bar);
+		color: var(--background);
+	}
 
+	.vl-tag-count {
+		padding: 1rem;
+		background: var(--border);
+		border-radius: 2.5rem;
+		margin-left: 3rem;
+	}
+	.vl-tag-btn:is(:hover,.is-active) .vl-tag-count {
+		background: var(--foreground-bar-2);
+		color: var(--background);
 	}
 
 	/* Player Page */
@@ -576,10 +602,11 @@ class AudioListing {
 
 class AudioDirectory {
 	constructor({ elements, titleSelector, descriptionSelector, playCountSelector = false, filterElement = false }){
-		this.audios = [];
-		this.tags = {};
+		this.audios = []; // used to iterate through audio info
+		this.tags = {}; // used as a reference for which items have which tags
+		this.selectedTags = []; // used to keep track of current filters
 
-		// Add custom descriptions
+		// process all audios
 		for( let index = 0; index < elements.length; index++ ){
 			let audio = new AudioListing({
 				element: elements[index],
@@ -590,8 +617,9 @@ class AudioDirectory {
 			});
 			this.audios.push(audio);
 			for( let tag of audio.tags ){
-				if(!( tag in this.tags )){ this.tags[tag] = []; }
-				this.tags[tag].push(audio.element);
+				let tagName = tag.toLowerCase();
+				if(!( tagName in this.tags )){ this.tags[tagName] = []; }
+				this.tags[tagName].push(audio.element);
 			}
 		}
 
@@ -613,10 +641,6 @@ class AudioDirectory {
 			sortHeader.textContent = 'Sort by...';
 			this.sortElement.append(sortHeader);
 
-			this.sortList = document.createElement('div');
-			this.sortList.className = 'vl-column';
-			this.sortElement.append(this.sortList);
-
 			let searchHeader = document.createElement('h6');
 			searchHeader.className = 'vl-filter-header';
 			searchHeader.textContent = 'Search...';
@@ -626,6 +650,14 @@ class AudioDirectory {
 			tagHeader.className = 'vl-filter-header';
 			tagHeader.textContent = 'Filter by tag...';
 			this.tagElement.append(tagHeader);
+
+			this.sortList = document.createElement('div');
+			this.sortList.className = 'vl-column';
+			this.sortElement.append(this.sortList);
+
+			this.tagList = document.createElement('div');
+			this.tagList.className = 'vl-row';
+			this.tagElement.append(this.tagList);
 
 			// set up sorting
 			this.calculatedSorts = {};
@@ -649,9 +681,17 @@ class AudioDirectory {
 			this.searchBar.addEventListener('input', ()=>{ this.search() });
 			this.searchTimeout = setTimeout(null, 0);
 
-			// todo: tag filters
+			// set up tag filters
 
-
+			let sortedTags = Object.keys(this.tags).sort((first,second)=>{
+				// sort primarily by number of elements that match the tag with a secondary alphabetical sort 
+				let tagCount = this.tags[second].length - this.tags[first].length
+				let tagName = first < second ? -1 : first > second ? 1 : 0;
+				return tagCount === 0 ? tagName : tagCount;
+			});
+			for( let tag of sortedTags ){
+				this.createTagButton(tag);
+			}
 
 			// Append all workspace items to DOM
 			this.filterElement.append(this.sortElement, this.searchElement, this.tagElement);
@@ -666,12 +706,37 @@ class AudioDirectory {
 		button.dataset.column = column;
 		button.dataset.direction = direction;
 
-		button.onclick = ()=>{
+		button.addEventListener('click', ()=>{
 			this.sort(column, direction);
-		};
-		this.sortList.appendChild(button);
+		});
+		this.sortList.append(button);
 		this.sortButtons[column] = button;
-		return button;
+	}
+
+	createTagButton( tag ){
+		let button = document.createElement('button');
+		button.type = 'button';
+		button.textContent = tag;
+		button.className = 'vl-tag-btn';
+
+		let count = document.createElement('span');
+		count.className = 'vl-tag-count';
+		count.textContent = this.tags[tag].length;
+		button.append(count);
+
+		button.addEventListener('click', ()=>{
+			let selected = this.selectedTags.indexOf(tag);
+			if( selected > -1 ){
+				button.classList.remove('is-active');
+				this.selectedTags.splice(selected, 1);
+			}
+			else {
+				button.classList.add('is-active');
+				this.selectedTags.push(tag);
+			}
+			this.applySelectedTags();
+		});
+		this.tagList.append(button);
 	}
 
 	sort( column = 'order', direction = 'descending' ){
@@ -797,8 +862,28 @@ class AudioDirectory {
 		}
 	}
 
-	filter( ){
+	applySelectedTags( ){
+		if( this.selectedTags.length === 0 ){
+			for( let audio of this.audios ){
+				audio.element.classList.remove('vl-hidden-by-tag');
+			}
+			return;
+		}
 
+		for( let audio of this.audios ){
+			audio.element.classList.add('vl-hidden-by-tag');
+			
+			let passesAllTags = true;
+			for( let tag of this.selectedTags ){
+				if(! this.tags[tag].includes(audio.element) ){
+					passesAllTags = false;
+					break;
+				}
+			}
+			if( passesAllTags ){
+				audio.element.classList.remove('vl-hidden-by-tag');
+			}
+		}
 	}
 }
 
