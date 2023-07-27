@@ -117,6 +117,7 @@ css.textContent = `
 	/* Multiple-page rules */
 
 	body #container,
+	.vl-container,
 	body .sound-details,
 	#jp_container_1,
 	body .uploadform,
@@ -149,6 +150,21 @@ css.textContent = `
 		max-width: 800rem;
 	}
 
+	.vl-container {
+		max-width: 770rem;
+		padding: 15rem;
+		border-size: 1rem;
+		margin-top: 30rem;
+	}
+
+	.vl-container-header {
+		padding-bottom: 10rem;
+		border-bottom: 1px solid var(--border);
+		margin: 0 0 14rem;
+		font-size: 16px;
+		font-weight: normal;
+	}
+
 	.vl-column {
 		display: flex;
 		flex-flow: column nowrap;
@@ -157,11 +173,29 @@ css.textContent = `
 		align-items: start;
 	}
 
+	.vl-link {
+		color: var(--text-medium);
+	}
+	.vl-link:hover {
+		color: var(--text-high);
+		text-decoration: underline;
+	}
+
 
 	.vl-paragraph {
 		margin: 0 0 5rem;
 		font-size: 12rem;
 		line-height: 1.35;
+	}
+
+	/* Home Page */
+
+	.vl-user-list {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 5rem;
+		justify-items: start;
+		align-items: start;
 	}
 
 	/* User Page */
@@ -490,6 +524,38 @@ function paragraph( text ){
 	p.className = 'vl-paragraph';
 	p.textContent = text;
 	return p;
+}
+
+var users = new class UserDatabase {
+	constructor( ){
+		let storage = GM_getValue('knownUsernames', '[]');
+		this.names = JSON.parse(storage);
+	}
+
+	generateUserList( ){
+		
+	}
+
+	add( name ){
+		let index = this.names.indexOf(name);
+		if( index === -1 ){
+			this.names.push(name);
+			this.save();
+		}
+	}
+
+	remove( name ){
+		let index = this.names.indexOf(name);
+		if( index > -1 ){
+			this.names.splice(index, 1);
+			this.save();
+		}
+	}
+
+	save( ){
+		console.log('saving', JSON.stringify(this.names));
+		GM_setValue('knownUsernames', JSON.stringify(this.names));
+	}
 }
 
 class AudioListing {
@@ -989,11 +1055,46 @@ function domLoaded() {
 	document.body.appendChild(footer);
 
 	var path = window.location.pathname;
-	if(path.slice(-1) === '/') {
-		path = path.substr(0, path.length - 1);
-	}
 
 	// Per-page sections
+
+	// Any page with a user as long as it has content
+	if( content && path.startsWith('/u/') && path.split('/').length > 2 ){
+		let username = path.split('/')[2];
+		users.add(username);
+	}
+
+	// Homepage
+	if( path === '/' ){
+		document.querySelector('h1').textContent = 'Welcome to Soundgasm.net, improved!';
+
+		let container = document.createElement('div');
+		container.className = 'vl-container';
+		let header = document.createElement('h3');
+		header.className = 'vl-container-header';
+		header.textContent = 'Known user list.';
+		container.append(header);
+
+		if( users.names.length === 0 ){
+			container.append(paragraph(`The script will remember usernames from the audio and user pages you visit. Once you've opened a few, you can always come back here to find them all!`));
+		}
+		else {
+			let userList = document.createElement('div');
+			userList.classList.add('vl-user-list');
+			userList.style.fontSize = '14rem';
+
+			for( let username of users.names.sort() ){
+				let link = document.createElement('a');
+				link.href = `/u/${username}`;
+				link.textContent = `• ${username}`;
+				link.className = 'vl-link';
+				userList.append(link);
+			}
+
+			container.append(userList);
+		}
+		footer.insertAdjacentElement('beforebegin', container);
+	}
 
 	// User pages
 	if( content && path.startsWith('/u/') && path.split('/').length < 4 ){
