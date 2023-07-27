@@ -139,10 +139,14 @@ css.textContent = `
 		color: var(--text-low);
 	}
 
-	/* Generic Container */
+	/* Generic Containers */
 
 	body p.footer {
 		border-color: var(--border);
+	}
+
+	body #container {
+		max-width: 800rem;
 	}
 
 	.vl-column {
@@ -209,41 +213,41 @@ css.textContent = `
 		gap: 20rem;
 		margin: 0 auto;
 	}
-	@media (max-width: 901px) {
-		.vl-split {
-			grid-auto-flow: row;
-		}
-	}
-	@media (min-width: 900px) {
-		.vl-split {
-			grid-auto-flow: column;
-			align-items: start;
-		}
-	}
 
 	.vl-directory {
 		display: grid;
 		width: 100vw;
 		max-width: 620rem;
 		grid-auto-flow: row;
+		margin: 0 auto;
 	}
 
 	.vl-sidebar {
 		padding: 10rem;
 		border-radius: 4rem;
+		overflow-y: auto;
 	}
-	@media (max-width: 901px) {
+
+	@media (max-width: 941px) {
+		.vl-split {
+			grid-auto-flow: row;
+		}
 		.vl-sidebar {
+			max-width: 600rem;
+			max-height: 80vh;
 			border: 1px solid var(--border);
 		}
 	}
-	@media (min-width: 900px) {
+	@media (min-width: 940px) {
+		.vl-split {
+			grid-auto-flow: column;
+			align-items: start;
+		}
 		.vl-sidebar {
 			position: sticky;
 			top: 20rem;
 			width: 220rem;
 			max-height: calc(100vh - 160rem);
-			overflow-y: auto;
 			order: 1;
 		}
 	}
@@ -683,7 +687,7 @@ class AudioDirectory {
 			this.searchBar = document.createElement('input');
 			this.searchBar.type = 'search';
 			this.searchBar.className = 'vl-search';
-			this.searchBar.placeholder = 'Include an exact phrase.';
+			this.searchBar.placeholder = 'Search here.';
 			this.searchElement.append(this.searchBar);
 			this.searchElement.append(paragraph(`Search supports some basic operators. For example: "phrase" to require an exact string or word and -word to excluse a word. Un-quoted words are treated as OR.`));
 
@@ -954,7 +958,7 @@ class AudioDirectory {
 function domLoaded() {
 	// If content is blank
 	let content = document.querySelector('body > div');
-	if(content === null) {
+	if( content === null ) {
 		let blank = document.createElement('div');
 		blank.id = 'container';
 		blank.innerHTML = `<div id="body"><p>There's nothing here.</p></div>`;
@@ -992,7 +996,7 @@ function domLoaded() {
 	// Per-page sections
 
 	// User pages
-	if( path.startsWith('/u/') && path.split('/').length < 4 ){
+	if( content && path.startsWith('/u/') && path.split('/').length < 4 ){
 		// Prep DOM for filters
 		let container = document.createElement('div');
 		container.className = 'vl-split';
