@@ -548,7 +548,7 @@ class AudioListing {
 
 		// Create "view raw" button
 		var viewRawBtn = document.createElement('a');
-		viewRawBtn.href = '#';
+		viewRawBtn.href = 'javascript:void(0);';
 		viewRawBtn.classList.add('vl-showraw');
 		viewRawBtn.textContent = 'Show raw.'
 		viewRawBtn.onclick = ()=>{
@@ -956,7 +956,7 @@ function domLoaded() {
 	// Theme switcher
 	let themeSwitcher = document.createElement('a');
 	themeSwitcher.textContent = 'Theme';
-	themeSwitcher.href = '#';
+	themeSwitcher.href = 'javascript:void(0);';
 	themeSwitcher.onclick = function() {
 		if(GM_getValue('theme', 'dark') === 'dark') {
 			GM_setValue('theme', 'light');
