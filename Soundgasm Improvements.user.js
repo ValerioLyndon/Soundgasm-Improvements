@@ -257,6 +257,7 @@ css.textContent = `
 
 	/* Filters */
 
+	.vl-hidden,
 	.vl-hidden-by-search,
 	.vl-hidden-by-tag {
 		display: none !important;
@@ -273,7 +274,7 @@ css.textContent = `
 	.vl-filter-header {
 		border-bottom: 1rem solid var(--border);
 		line-height: 1.25em;
-		margin: 0 0 5rem;
+		margin: 0 0 10rem;
 		font-size: 1em;
 		font-weight: bold;
 	}
@@ -605,6 +606,8 @@ class AudioDirectory {
 		this.audios = []; // used to iterate through audio info
 		this.tags = {}; // used as a reference for which items have which tags
 		this.selectedTags = []; // used to keep track of current filters
+		this.availableElements = []; // used to update tag counts in the sidebar
+		this.tagButtons = []; // used to update tag counts in the sidebar
 
 		// process all audios
 		for( let index = 0; index < elements.length; index++ ){
@@ -719,10 +722,11 @@ class AudioDirectory {
 		button.textContent = tag;
 		button.className = 'vl-tag-btn';
 
-		let count = document.createElement('span');
-		count.className = 'vl-tag-count';
-		count.textContent = this.tags[tag].length;
-		button.append(count);
+		let count = this.tags[tag].length;
+		let countElement = document.createElement('span');
+		countElement.className = 'vl-tag-count';
+		countElement.textContent = count;
+		button.append(countElement);
 
 		button.addEventListener('click', ()=>{
 			let selected = this.selectedTags.indexOf(tag);
@@ -737,6 +741,12 @@ class AudioDirectory {
 			this.applySelectedTags();
 		});
 		this.tagList.append(button);
+		this.tagButtons.push({
+			'element': button,
+			'tag': tag,
+			'countElement': countElement,
+			'count': count
+		});
 	}
 
 	sort( column = 'order', direction = 'descending' ){
@@ -826,12 +836,15 @@ class AudioDirectory {
 			for( let audio of this.audios ){
 				if( this.passesSearch(audio, phrases, words, exclusions) ){
 					audio.element.classList.remove('vl-hidden-by-search');
+					this.updateAvailableElements(audio.element);
 				}
 				else {
 					audio.element.classList.add('vl-hidden-by-search');
+					this.updateAvailableElements(audio.element);
 				}
 			}
-		}, 250);
+			this.updateTagCounts();
+		}, 350);
 	}
 
 	passesSearch( audioListing, phrases, words, exclusions ){
@@ -866,13 +879,13 @@ class AudioDirectory {
 		if( this.selectedTags.length === 0 ){
 			for( let audio of this.audios ){
 				audio.element.classList.remove('vl-hidden-by-tag');
+				this.updateAvailableElements( audio.element );
 			}
+			this.updateTagCounts();
 			return;
 		}
 
 		for( let audio of this.audios ){
-			audio.element.classList.add('vl-hidden-by-tag');
-			
 			let passesAllTags = true;
 			for( let tag of this.selectedTags ){
 				if(! this.tags[tag].includes(audio.element) ){
@@ -882,6 +895,43 @@ class AudioDirectory {
 			}
 			if( passesAllTags ){
 				audio.element.classList.remove('vl-hidden-by-tag');
+				this.updateAvailableElements( audio.element );
+			}
+			else {
+				audio.element.classList.add('vl-hidden-by-tag');
+				this.updateAvailableElements( audio.element );
+			}
+		}
+		this.updateTagCounts();
+	}
+
+	updateAvailableElements( element ){
+		let index = this.availableElements.indexOf(element);
+		let hidden = element.classList.contains('vl-hidden-by-tag') | element.classList.contains('vl-hidden-by-search')
+		if( hidden && index > -1 ){
+			this.availableElements.splice(index, 1);
+		}
+		else if( !hidden && index === -1 ){
+			this.availableElements.push(element);
+		}
+	}
+
+	updateTagCounts( ){
+		for( let data of this.tagButtons ){
+			let tag = data.tag;
+			let availableCount = 0;
+			for( let element of this.availableElements ){
+				if( this.tags[tag].includes(element) ){
+					availableCount++;
+				}
+			}
+
+			if( availableCount > 0 ){
+				data.countElement.textContent = availableCount;
+				data.element.classList.remove('vl-hidden');
+			}
+			else {
+				data.element.classList.add('vl-hidden');
 			}
 		}
 	}
