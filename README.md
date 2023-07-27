@@ -7,7 +7,7 @@ Restyles and adds new functionality to Soundgasm. These changes make for a much 
 - Keyboard shortcuts
 - Direct links to files
 - Cleaned titles and descriptions for easier reading
-- Improved user pages with sort, serach, and filter-by-tag options.
+- Improved user pages with sort, search, and filter-by-tag options.
 - A history of visited users, accessible via the home page.
 
 **List of keyboard shortcuts:**
