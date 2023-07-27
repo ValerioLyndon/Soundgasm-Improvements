@@ -153,13 +153,6 @@ css.textContent = `
 		align-items: start;
 	}
 
-	.vl-row {
-		display: flex;
-		flex-flow: row wrap;
-		gap: 10rem 5rem;
-		margin-bottom: 5rem;
-		align-items: start;
-	}
 
 	.vl-paragraph {
 		margin: 0 0 5rem;
@@ -249,7 +242,7 @@ css.textContent = `
 			position: sticky;
 			top: 20rem;
 			width: 220rem;
-			max-height: calc(100vh - 90rem);
+			max-height: calc(100vh - 160rem);
 			overflow-y: auto;
 			order: 1;
 		}
@@ -264,7 +257,7 @@ css.textContent = `
 	}
 
 	.vl-filters {
-		font-size: 14rem;
+		font-size: 12rem;
 	}
 
 	.vl-filter-section {
@@ -273,9 +266,9 @@ css.textContent = `
 
 	.vl-filter-header {
 		border-bottom: 1rem solid var(--border);
-		line-height: 1.25em;
 		margin: 0 0 10rem;
-		font-size: 1em;
+		font-size: 14rem;
+		line-height: 1.25em;
 		font-weight: bold;
 	}
 
@@ -294,36 +287,46 @@ css.textContent = `
 	}
 
 	.vl-search {
+		padding: 4rem;
 		border-radius: 3px;
 		margin: 0 0 5rem;
 	}
 
+	.vl-tag-list {
+		width: 100%;
+		text-align: left;
+	}
+	.vl-tag-list th {
+		font-size: 12rem;
+	}
+	.vl-tag-list tr > *:last-child {
+		text-align: right;
+	}
+
 	.vl-tag-btn {
-		display: inline-block;
+		display: inline;
 		padding: 2rem 4rem;
-		background: var(--foreground-2);
+		background: none;
 		border: none;
 		border-radius: 2.5rem;
 		color: var(--text-medium);
 		font-size: 11rem;
+		text-align: left;
 		text-transform: capitalize;
 		cursor: pointer;
 	}
 	.vl-tag-btn.is-active,
 	.vl-tag-btn:hover {
-		background: var(--foreground-bar);
-		color: var(--background);
+		background: var(--foreground-2);
+		color: var(--text-high);
+	}
+	.vl-tag-btn.is-active {
+		font-weight: bold;
 	}
 
 	.vl-tag-count {
 		padding: 1rem;
-		background: var(--border);
-		border-radius: 2.5rem;
-		margin-left: 3rem;
-	}
-	.vl-tag-btn:is(:hover,.is-active) .vl-tag-count {
-		background: var(--foreground-bar-2);
-		color: var(--background);
+		font-size: 12rem;
 	}
 
 	/* Player Page */
@@ -658,8 +661,11 @@ class AudioDirectory {
 			this.sortList.className = 'vl-column';
 			this.sortElement.append(this.sortList);
 
-			this.tagList = document.createElement('div');
-			this.tagList.className = 'vl-row';
+			this.tagList = document.createElement('table');
+			this.tagList.className = 'vl-tag-list';
+			this.tagList.insertAdjacentHTML("afterbegin", `
+				<tr><th>Name</th><th>Count</th></tr>
+			`);
 			this.tagElement.append(this.tagList);
 
 			// set up sorting
@@ -717,16 +723,24 @@ class AudioDirectory {
 	}
 
 	createTagButton( tag ){
+		let row = document.createElement('tr');
+		let cell1 = document.createElement('td');
+		let cell2 = document.createElement('td');
+
 		let button = document.createElement('button');
 		button.type = 'button';
 		button.textContent = tag;
 		button.className = 'vl-tag-btn';
+		cell1.append(button)
 
 		let count = this.tags[tag].length;
 		let countElement = document.createElement('span');
 		countElement.className = 'vl-tag-count';
 		countElement.textContent = count;
-		button.append(countElement);
+		cell2.append(countElement);
+		
+		row.append(cell1, cell2);
+		this.tagList.append(row);
 
 		button.addEventListener('click', ()=>{
 			let selected = this.selectedTags.indexOf(tag);
@@ -740,12 +754,10 @@ class AudioDirectory {
 			}
 			this.applySelectedTags();
 		});
-		this.tagList.append(button);
 		this.tagButtons.push({
-			'element': button,
+			'element': row,
 			'tag': tag,
-			'countElement': countElement,
-			'count': count
+			'countElement': countElement
 		});
 	}
 
