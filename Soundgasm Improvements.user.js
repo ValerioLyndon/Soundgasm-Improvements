@@ -154,7 +154,7 @@ css.textContent = `
 		max-width: 770rem;
 		padding: 15rem;
 		border-size: 1rem;
-		margin-top: 30rem;
+		margin: 30rem auto;
 	}
 
 	.vl-container-header {
@@ -201,22 +201,30 @@ css.textContent = `
 	/* User Page */
 
 	body .sound-details {
-		display: flex;
+		display: grid;
 		width: calc(100% - 22rem);
 		padding: 10rem;
 		border-radius: 4rem;
 		margin: 0 auto 12rem;
-		flex-flow: row wrap;
+		grid-template-columns: 1fr 70rem;
+		grid-template-rows: auto auto;
+		grid-template-areas:
+			"title plays"
+			"description description";
+		grid-auto-flow: column;
 	}
 
+
 	.sound-details > a {
-		max-width: calc(100% - 70rem);
+		grid-area: title;
+		justify-self: start;
 		font-size: 16rem;
 		font-weight: bold;
 		white-space: normal;
 	}
 
 	.playCount {
+		grid-area: plays;
 		max-width: 70rem;
 		margin-left: auto;
 		text-align: right;
@@ -234,6 +242,7 @@ css.textContent = `
 	}
 
 	.soundDescription {
+		grid-area: description;
 		order: 3;
 		width: 100%;
 		margin-top: 6rem;
@@ -458,11 +467,10 @@ css.textContent = `
 	}
 
 	.vl-desc-new, .vl-desc-raw {
-		white-space: pre-wrap;
 		margin: 12rem 0;
 	}
-	.sound-details .vl-desc-new, .sound-details .vl-desc-raw {
-		display: inline;
+	.sound-details .vl-desc-new, .sound-details .vl-desc-raw:not([style*="none"]) {
+		display: inline !important;
 		white-space: normal;
 	}
 
@@ -512,6 +520,14 @@ css.textContent = `
 
 	.vl-footer a {
 		padding: 0 15rem;
+	}
+
+
+	/* fixes */
+	
+	.patreon-widget {
+		width: 300px !important;
+		height: 36px !important;
 	}
 `;
 
@@ -653,15 +669,25 @@ class AudioListing {
 		// parse play count and change html
 		let plays = false;
 		if( playCountSelector ){
+			// this if else and element.append are place here due to weird HTML bugs on the default website
 			let playElement = element.querySelector(playCountSelector);
-			plays = playElement.textContent.split(': ')[1];
-
-			let playText = String(plays);
-			if( plays.length > 3 ) {
-				playElement.title = `played ${plays} times`;
-				playText = playText.substring(0, plays.length - 3) + 'k';
+			if( !playElement ){
+				plays = 0;
+				playElement = document.createElement('span');
+				playElement.className = 'playCount';
+				playElement.textContent = 'unknown';
 			}
-			playElement.textContent = playText;
+			else {
+				plays = playElement.textContent.split(': ')[1];
+
+				let playText = String(plays);
+				if( plays.length > 3 ) {
+					playElement.title = `played ${plays} times`;
+					playText = playText.substring(0, plays.length - 3) + 'k';
+				}
+				playElement.textContent = playText;
+			}
+			element.append(playElement);
 		}
 
 		// Assign variables for use in AudioDirectory classes
@@ -1070,6 +1096,7 @@ function domLoaded() {
 
 		let container = document.createElement('div');
 		container.className = 'vl-container';
+		container.style.marginBottom = '0';
 		let header = document.createElement('h3');
 		header.className = 'vl-container-header';
 		header.textContent = 'Known user list.';
@@ -1116,6 +1143,22 @@ function domLoaded() {
 		container.append(sidebar, directory);
 		document.getElementsByTagName('footer')[0].insertAdjacentElement('beforebegin', container);
 		
+		// catch any oddities such as patron links and other things from descriptions
+		let patreon = document.querySelector('.soundDescription .patreon-widget');
+		if( patreon ){
+			let container = document.createElement('div');
+			container.className = 'vl-container';
+			container.style.marginTop = '0';
+			container.style.width = 'calc(100% - 30rem)';
+			let header = document.createElement('h3');
+			header.className = 'vl-container-header';
+			header.textContent = 'Extra user info.';
+			container.append(header, patreon);
+
+			directory.style.order = '-1';
+			directory.prepend(container);
+		}
+
 		// Process audio listings
 		new AudioDirectory({
 			elements: items,
