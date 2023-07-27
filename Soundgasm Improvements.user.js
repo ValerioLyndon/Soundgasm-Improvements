@@ -801,6 +801,10 @@ class AudioDirectory {
 			// Append all workspace items to DOM
 			this.filterElement.append(this.sortElement, this.searchElement, this.tagElement);
 		}
+
+		if( Object.keys(this.tags).length === 0 ){
+			this.tagElement.remove();
+		}
 	}
 
 	createSortButton( title, column, direction ){
