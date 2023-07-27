@@ -3,11 +3,12 @@
 Restyles and adds new functionality to Soundgasm. These changes make for a much better experience, even when only visiting single audios for short periods.
 
 **Features include:**
-- Dark mode
+- Overhauled interface with dark and light modes
 - Keyboard shortcuts
+- Direct links to files
 - Cleaned titles and descriptions for easier reading
-- Sort functions on user pages
-- Direct links to audio files
+- Improved user pages with sort, serach, and filter-by-tag options.
+- A history of visited users, accessible via the home page.
 
 **List of keyboard shortcuts:**
 - `p`/`k`/`space` - Play/Pause

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Soundgasm Improvements
 // @namespace   V.L
-// @version     0.14
+// @version     1.0
 // @description Restyles and adds new functionality to Soundgasm --- dark mode/keyboard shortcuts/quick download/and more
 // @author      Valerio Lyndon
 // @homepageURL https://github.com/ValerioLyndon/Soundgasm-Improvements
