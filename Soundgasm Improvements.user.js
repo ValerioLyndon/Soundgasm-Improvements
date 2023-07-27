@@ -13,12 +13,13 @@
 // @grant       GM_setValue
 // ==/UserScript==
 
+'use strict';
+
 document.addEventListener("DOMContentLoaded", domLoaded);
-window.addEventListener("load", fullyloaded);
 
 // Dark or Light mode
 
-theme = GM_getValue('theme', 'dark');
+const theme = GM_getValue('theme', 'dark');
 document.documentElement.classList.add(theme);
 
 // CSS
@@ -502,22 +503,8 @@ class AudioDirectory {
 				order: index
 			}));
 		}
-		console.log(this.audios);
 
-		// Add filters
-		// var sidebarAnchor = document.createElement('div'),
-		// 	sidebar = document.createElement('div');
-
-		// sidebarAnchor.id = 'sidebar-anchor';
-		// sidebarAnchor.style.position = 'relative';
-		// sidebarAnchor.appendChild(sidebar);
-
-		// sidebar.classList.add('vl-sidebar');
-		// sidebar.textContent = 'Filter by tag';
-
-		// document.body.insertBefore(sidebarAnchor, document.querySelector('.sound-details'));
-
-		// intialise sorting
+		// intialise filters and sorting
 		if( filterElement ){
 			this.filterElement = filterElement;
 			this.calculatedSorts = {};
@@ -528,6 +515,10 @@ class AudioDirectory {
 			this.createSortButton('Date', 'order', 'descending');
 
 			this.sort();
+
+			// todo: search
+
+			// todo: tag filters
 		}
 	}
 
@@ -615,23 +606,21 @@ class AudioDirectory {
 // Begin modifying page
 
 function domLoaded() {
-	console.log ("==> DOM is loaded.");
-
 	// If content is blank
-	var content = document.querySelector('body > div');
+	let content = document.querySelector('body > div');
 	if(content === null) {
-		var blank = document.createElement('div');
+		let blank = document.createElement('div');
 		blank.id = 'container';
 		blank.innerHTML = `<div id="body"><p>There's nothing here.</p></div>`;
 		document.body.appendChild(blank);
 	}
 
 	// Add footer
-	var footer = document.createElement('footer');
+	let footer = document.createElement('footer');
 	footer.classList.add('vl-footer');
 
 	// Theme switcher
-	var themeSwitcher = document.createElement('a');
+	let themeSwitcher = document.createElement('a');
 	themeSwitcher.textContent = 'Theme';
 	themeSwitcher.href = '#';
 	themeSwitcher.onclick = function() {
@@ -654,11 +643,14 @@ function domLoaded() {
 		path = path.substr(0, path.length - 1);
 	}
 
-	// user page
+	// Per-page sections
+
+	// User pages
 	if( path.startsWith('/u/') && path.split('/').length < 4 ){
 		// Prep DOM for filters
-		document.body.style.display = "flex";
-		document.body.style.flexDirection = "column";
+		let items = document.querySelectorAll('.sound-details');
+		document.body.style.display = 'flex';
+		document.body.style.flexDirection = 'column';
 		document.querySelector('header').style.order = '-1';
 		document.querySelector('footer').style.order = '99999';
 
@@ -666,10 +658,23 @@ function domLoaded() {
 		filterElement.classList.add('vl-sortheader');
 		filterElement.textContent = 'Sort by: ';
 		document.body.insertBefore(filterElement, document.querySelector('.sound-details'));
+
+		// Add filters
+		// var sidebarAnchor = document.createElement('div'),
+		// 	sidebar = document.createElement('div');
+
+		// sidebarAnchor.id = 'sidebar-anchor';
+		// sidebarAnchor.style.position = 'relative';
+		// sidebarAnchor.appendChild(sidebar);
+
+		// sidebar.classList.add('vl-sidebar');
+		// sidebar.textContent = 'Filter by tag';
+
+		// document.body.insertBefore(sidebarAnchor, document.querySelector('.sound-details'));
 		
 		// Process audio listings
 		new AudioDirectory({
-			elements: document.querySelectorAll('.sound-details'),
+			elements: items,
 			titleSelector: 'a',
 			descriptionSelector: '.soundDescription',
 			playCountSelector: '.playCount',
@@ -677,7 +682,7 @@ function domLoaded() {
 		});
 	}
 
-	// player page
+	// Player page
 	if( path.startsWith('/u/') && path.split('/').length > 3 ){
 		// Add custom descriptions
 		new AudioListing({
@@ -686,12 +691,10 @@ function domLoaded() {
 			descriptionSelector: '.jp-description'
 		});
 
-		// basic variables
-		var play = document.querySelector('.jp-play'),
-			stop = document.querySelector('.jp-stop'),
-			title = document.querySelector('.jp-title'),
-			author = document.querySelector('div[style="margin:10px 0"] a'),
-			audio = document.querySelector('audio');
+		let stop = document.querySelector('.jp-stop');
+		let title = document.querySelector('.jp-title');
+		let author = document.querySelector('div[style="margin:10px 0"] a');
+		let audio = document.querySelector('audio');
 
 		// Keypress handler
 		function setKeybinds() {
@@ -731,16 +734,16 @@ function domLoaded() {
 					audio.currentTime += time;
 				}
 				else if(k === 'arrowup') {
-					newVol = audio.volume + 0.1;
+					let newVol = audio.volume + 0.1;
 					if(newVol > 1) {
-					newVol = 1.0;
+						newVol = 1.0;
 					}
 					audio.volume = newVol;
 				}
 				else if(k === 'arrowdown') {
-					newVol = audio.volume - 0.1;
+					let newVol = audio.volume - 0.1;
 					if(newVol < 0) {
-					newVol = 0.0;
+						newVol = 0.0;
 					}
 					audio.volume = newVol;
 				}
@@ -779,44 +782,41 @@ function domLoaded() {
 
 		// Download button
 		function addDownload() {
-			var audio = document.querySelector('audio'),
-				src = audio.getAttribute('src'),
-					ext = src.split('.').pop(),
-					dl = document.createElement('a');
-				dl.classList.add('dl');
-				footer.appendChild(dl);
-				dl.href = src;
-				dl.setAttribute("download", title.innerText + ' by ' + author.innerText + '.' + ext);
-				dl.setAttribute("target", "_blank");
-				dl.textContent = 'Download this audio';
+			let audio = document.querySelector('audio');
+			let src = audio.getAttribute('src');
+			let ext = src.split('.').pop();
+			let dl = document.createElement('a');
+
+			dl.classList.add('dl');
+			footer.appendChild(dl);
+			dl.href = src;
+			dl.setAttribute("download", title.innerText + ' by ' + author.innerText + '.' + ext);
+			dl.setAttribute("target", "_blank");
+			dl.textContent = 'Download this audio';
+		}
+		function audioLoaded() {
+			audio = document.querySelector('audio');
+			if(audio !== null && audio.getAttribute('src') !== null) {
+				// observer.disconnect();
+				addDownload();
+				setKeybinds();
+			} else {
+				setTimeout(audioLoaded, 100);
+			}
 		}
 
 		// Wait for audio to load
 		if(audio !== null && audio.getAttribute('src') !== null) {
 			addDownload();
 		} else {
-			function audioLoaded() {
-				audio = document.querySelector('audio');
-				if(audio !== null && audio.getAttribute('src') !== null) {
-					// observer.disconnect();
-					addDownload();
-					setKeybinds();
-				} else {
-					setTimeout(audioLoaded, 100);
-				}
-			}
 			audioLoaded();
 		}
 	}
 
 	// signup page
 	if(window.location.pathname.startsWith('/signup')) {
-		var h1 = document.querySelector('h1'),
-			form = document.querySelector('.signupform');
+		let h1 = document.querySelector('h1');
+		let form = document.querySelector('.signupform');
 		form.prepend(h1);
 	}
-}
-
-function fullyloaded () {
-	console.log ("==> Page is fully loaded, including images." );
 }
