@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Soundgasm Improvements
 // @namespace   V.L
-// @version     1.0
+// @version     1.0.1
 // @description Restyles and adds new functionality to Soundgasm --- dark mode/keyboard shortcuts/quick download/and more
 // @author      Valerio Lyndon
 // @homepageURL https://github.com/ValerioLyndon/Soundgasm-Improvements
@@ -781,7 +781,7 @@ class AudioDirectory {
 			this.searchBar.className = 'vl-search';
 			this.searchBar.placeholder = 'Search here.';
 			this.searchElement.append(this.searchBar);
-			this.searchElement.append(paragraph(`Search supports some basic operators. For example: "phrase" to require an exact string or word and -word to excluse a word. Un-quoted words are treated as OR.`));
+			this.searchElement.append(paragraph(`Search supports some basic operators. For example: "phrase" to require an exact string or word and -word to exclude a word. Un-quoted words are treated as OR.`));
 
 			this.searchBar.addEventListener('input', ()=>{ this.search() });
 			this.searchTimeout = setTimeout(null, 0);
