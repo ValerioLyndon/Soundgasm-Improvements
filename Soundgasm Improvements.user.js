@@ -524,7 +524,7 @@ css.textContent = `
 
 
 	/* fixes */
-	
+
 	.patreon-widget {
 		width: 300px !important;
 		height: 36px !important;
@@ -549,7 +549,7 @@ var users = new class UserDatabase {
 	}
 
 	generateUserList( ){
-		
+
 	}
 
 	add( name ){
@@ -591,9 +591,9 @@ class AudioListing {
 		let descDiv = document.createElement('p');
 		let tags = new Set();
 		// match all words inside brackets [] {}. also matches parentheses () but only for one-word sections to try and avoid false positives
-		const extractTagsRegex = /[\[\{](.*?)[\]\}]|\(([^\s]+)\)/g;
+		const extractTagsRegex = /[\[\{]([^\[\]\{\}]*?)[\]\}]|\(([^\s]+)\)/g;
 		// same as the extraction regex but with extra whitespace matching rules
-		const removeTagsRegex = /\s*(?:[\[\{].*?[\]\}]|\([^\s]+\))\s*/g;
+		const removeTagsRegex = /\s*(?:[\[\{][^\[\]\{\}]*?[\]\}]|\([^\s]+\))\s*/g;
 
 		rawTitleDiv.textContent = title;
 		rawTitleDiv.style.display = 'none';
@@ -613,7 +613,7 @@ class AudioListing {
 
 		for( let match of tagMatches ){
 			let tag = match[1] === undefined ? match[2] : match[1];
-			
+
 			if( tag.length > 0 ){
 				tags.add(tag);
 			}
@@ -789,7 +789,7 @@ class AudioDirectory {
 			// set up tag filters
 
 			let sortedTags = Object.keys(this.tags).sort((first,second)=>{
-				// sort primarily by number of elements that match the tag with a secondary alphabetical sort 
+				// sort primarily by number of elements that match the tag with a secondary alphabetical sort
 				let tagCount = this.tags[second].length - this.tags[first].length
 				let tagName = first < second ? -1 : first > second ? 1 : 0;
 				return tagCount === 0 ? tagName : tagCount;
@@ -838,7 +838,7 @@ class AudioDirectory {
 		countElement.className = 'vl-tag-count';
 		countElement.textContent = count;
 		cell2.append(countElement);
-		
+
 		row.append(cell1, cell2);
 		this.tagList.append(row);
 
@@ -1146,7 +1146,7 @@ function domLoaded() {
 		directory.append(frag);
 		container.append(sidebar, directory);
 		document.getElementsByTagName('footer')[0].insertAdjacentElement('beforebegin', container);
-		
+
 		// catch any oddities such as patron links and other things from descriptions
 		let patreon = document.querySelector('.soundDescription .patreon-widget');
 		if( patreon ){
