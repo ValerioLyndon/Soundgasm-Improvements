@@ -518,8 +518,21 @@ css.textContent = `
 		padding-top: 30rem;
 	}
 
-	.vl-footer a {
+	.vl-footer > * {
 		padding: 0 15rem;
+		vertical-align: top;
+	}
+
+	.vl-check {
+		display: inline-flex;
+		width: max-content;
+		font-weight: normal;
+		white-space: nowrap;
+		gap: 4rem;
+	}
+
+	.vl-check input {
+		margin: 0;
 	}
 
 
@@ -574,101 +587,104 @@ var users = new class UserDatabase {
 	}
 }
 
+// Adds author-defined CSS to the page after sanitisation to reduce clashes with the custom themes
+class AuthorCSS {
+	toggleNode;
+	storageFragment = new DocumentFragment();
+
+	constructor( ){
+		this.toggleNode = document.createElement('label');
+		this.toggleNode.className = 'vl-check';
+
+		const check = document.createElement('input');
+		this.toggleNode.append(check, 'Parse custom styles');
+		check.type = 'checkbox';
+		check.checked = this.enabled();
+		check.addEventListener('input', (ev)=>{
+			this.enabled(ev.target.checked);
+		})
+	}
+
+	enabled( set = null ){
+		console.assert(typeof set === 'boolean' || set === null, 'set must be boolean or null');
+
+		const gmKey = 'parseAuthorStyles';
+		if( typeof set === 'boolean' ){
+			GM_setValue(gmKey, set);
+			if( set ){
+				document.head.prepend(this.storageFragment);
+			}
+			else {
+				this.storageFragment.append(...document.head.getElementsByClassName('vl-author-css'));
+			}
+			return set;
+		}
+		return GM_getValue(gmKey);
+	}
+
+	add( css ){
+		console.assert(typeof css === 'string', 'css must be a string');
+
+		const style = document.createElement('style');
+		style.className = 'vl-author-css';
+		style.textContent = css;
+		if( this.enabled() ){
+			document.head.prepend(style);
+		}
+		else {
+			this.storageFragment.append(style);
+		}
+		console.log(this.storageFragment);
+	}
+}
+var authorCss;
+
 class AudioListing {
-	constructor({ element, titleSelector, descriptionSelector, playCountSelector = false, order = 0 }){
-		// Process description
-		let titleDestination = element.querySelector(titleSelector);
-		let descDestination = element.querySelector(descriptionSelector);
-		let desc = descDestination.textContent;
-		let title = titleDestination.textContent;
-		let originalTitle = title;
-		let originalDesc = desc;
-		let processedTitleDiv = document.createElement('span');
-		let rawTitleDiv = document.createElement('span');
-		let processedDescDiv = document.createElement('div');
-		let rawDescDiv = document.createElement('p');
-		let tagsDiv = document.createElement('div');
-		let descDiv = document.createElement('p');
-		let tags = new Set();
+	// Constructor processes all tags and data, then sends that to the DOM via the __Selector variables.
+	constructor({ element, titleSelector, descriptionSelector, playCountSelector = '', order = 0, parseStyle = false }){
+		console.assert(element instanceof HTMLElement, 'element must be an HTMLElement');
+		console.assert(typeof titleSelector === 'string', 'titleSelector must be a string');
+		console.assert(typeof descriptionSelector === 'string', 'descriptionSelector must be a string');
+		console.assert(typeof playCountSelector === 'string', 'playCountSelector must be a string');
+		console.assert(typeof order === 'number', 'order must be a number');
+		console.assert(typeof parseStyle === 'boolean', 'parseStyle must be a boolean');
+
+		const titleDestination = element.querySelector(titleSelector);
+		const descDestination = element.querySelector(descriptionSelector);
+
+		const origDesc = descDestination.innerText.trim();
+		const origTitle = titleDestination.innerText.trim();
+		const origDescNode = document.createElement('p');
+		const origTitleNode = document.createElement('span');
+
+		const titleNode = document.createElement('span');
+		const descParentNode = document.createElement('div');
+		const descNode = document.createElement('p');
+		const tagParentNode = document.createElement('div');
+
+		let desc = origDesc;
+		let title = origTitle;
+		let tagSet = new Set();
+
 		// match all words inside brackets [] {}. also matches parentheses () but only for one-word sections to try and avoid false positives
-		const extractTagsRegex = /[\[\{]([^\[\]\{\}]*?)[\]\}]|\(([^\s]+)\)/g;
-		// same as the extraction regex but with extra whitespace matching rules
-		const removeTagsRegex = /\s*(?:[\[\{][^\[\]\{\}]*?[\]\}]|\([^\s]+\))\s*/g;
+		const regex = /\s*(?:[\[\{]([^\[\]\{\}]*?)[\]\}]|\(([^\s]+)\))\s*/g;
 
-		rawTitleDiv.textContent = title;
-		rawTitleDiv.style.display = 'none';
+		origTitleNode.textContent = title;
+		origTitleNode.style.display = 'none';
+		origDescNode.classList.add('vl-desc-raw');
+		origDescNode.textContent = desc;
+		origDescNode.style.display = 'none';
 
-		processedDescDiv.classList.add('vl-desc-container');
-		tagsDiv.classList.add('vl-tags');
-		descDiv.classList.add('vl-desc-new');
-		processedDescDiv.appendChild(tagsDiv);
-		processedDescDiv.appendChild(descDiv);
+		tagParentNode.classList.add('vl-tags');
+		descNode.classList.add('vl-desc-new');
+		descParentNode.classList.add('vl-desc-container');
+		descParentNode.append(tagParentNode, descNode);
 
-		rawDescDiv.classList.add('vl-desc-raw');
-		rawDescDiv.textContent = desc;
-		rawDescDiv.style.display = 'none';
 
-		let combined = title + desc;
-		var tagMatches = combined.matchAll(extractTagsRegex);
+		// PLAY COUNTS
 
-		for( let match of tagMatches ){
-			let tag = match[1] === undefined ? match[2] : match[1];
-
-			if( tag.length > 0 ){
-				tags.add(tag);
-			}
-		}
-
-		// remove tags from text
-		title = title.replaceAll(removeTagsRegex, '')
-		desc = desc.replaceAll(removeTagsRegex, '')
-
-		// sort the tags by length
-		tags = Array.from(tags);
-		tags.sort( (a, b) => { return a.length - b.length; } );
-
-		// create the element
-		for( let i = 0; i < tags.length; i++ ){
-			var tagSpan = document.createElement('span');
-			tagSpan.classList.add('vl-tag');
-			tagSpan.textContent = tags[i];
-			tagsDiv.appendChild(tagSpan);
-		}
-
-		// Create "view raw" button
-		var viewRawBtn = document.createElement('a');
-		viewRawBtn.href = 'javascript:void(0);';
-		viewRawBtn.classList.add('vl-showraw');
-		viewRawBtn.textContent = 'Show raw.'
-		viewRawBtn.onclick = ()=>{
-			if( processedDescDiv.style.display === 'none' ){
-				processedTitleDiv.style.display = 'inline';
-				rawTitleDiv.style.display = 'none';
-				processedDescDiv.style.display = 'block';
-				rawDescDiv.style.display = 'none';
-				viewRawBtn.textContent = 'Show raw.';
-			} else {
-				processedTitleDiv.style.display = 'none';
-				rawTitleDiv.style.display = 'inline';
-				processedDescDiv.style.display = 'none';
-				rawDescDiv.style.display = 'block';
-				viewRawBtn.textContent = 'Show processed.';
-			}
-		}
-
-		// finish up with tags & description
-		descDiv.textContent = desc.trim();
-		processedTitleDiv.textContent = title.trim();
-
-		// Add everything back to DOM unless it is identical
-		if( title !== originalTitle || desc !== originalDesc ){
-			titleDestination.replaceChildren(processedTitleDiv, rawTitleDiv);
-			descDestination.replaceChildren(processedDescDiv, rawDescDiv, viewRawBtn);
-		}
-
-		// parse play count and change html
 		let plays = false;
-		if( playCountSelector ){
+		if( playCountSelector.length > 0 ){
 			// this if else and element.append are place here due to weird HTML bugs on the default website
 			let playElement = element.querySelector(playCountSelector);
 			if( !playElement ){
@@ -690,13 +706,90 @@ class AudioListing {
 			element.append(playElement);
 		}
 
-		// Assign variables for use in AudioDirectory classes
+
+		// CUSTOM STYLE FROM USER
+
+		if( parseStyle === true ){
+			const styleElements = descDestination.getElementsByTagName('style');
+			for( let styleNode of styleElements ){
+				authorCss.add(styleNode.textContent);
+			}
+		}
+
+
+		// TITLE & DESC
+
+		let combined = title + desc;
+		var tagMatches = combined.matchAll(regex);
+
+		for( let match of tagMatches ){
+			let tag = match[1] === undefined ? match[2] : match[1];
+
+			if( tag.length > 0 ){
+				tagSet.add(tag);
+			}
+		}
+
+		// remove tags from text
+		title = title.replaceAll(regex, '').trim();
+		desc = desc.replaceAll(regex, '').trim();
+
+		// sort the tags by length
+		let tagArray = Array.from(tagSet);
+		tagArray.sort( (a, b) => { return a.length - b.length; } );
+
+		// add tags to DOM
+		for( let i = 0; i < tagArray.length; i++ ){
+			const tagNode = document.createElement('span');
+			tagNode.classList.add('vl-tag');
+			tagNode.textContent = tagArray[i];
+			tagParentNode.appendChild(tagNode);
+		}
+
+		// Create "view raw" button
+		const viewRawBtn = document.createElement('a');
+		viewRawBtn.href = 'javascript:void(0);';
+		viewRawBtn.classList.add('vl-showraw');
+		viewRawBtn.textContent = 'Show raw.'
+		viewRawBtn.onclick = ()=>{
+			if( descParentNode.style.display === 'none' ){
+				titleNode.style.display = 'inline';
+				origTitleNode.style.display = 'none';
+				descParentNode.style.display = 'block';
+				origDescNode.style.display = 'none';
+				viewRawBtn.textContent = 'Show raw.';
+			} else {
+				titleNode.style.display = 'none';
+				origTitleNode.style.display = 'inline';
+				descParentNode.style.display = 'none';
+				origDescNode.style.display = 'block';
+				viewRawBtn.textContent = 'Show processed.';
+			}
+		}
+
+		// finish up with tags & description
+		if( desc.length === 0 && tagArray.length === 0 ){
+			descDestination.remove();
+		}
+		descNode.textContent = desc;
+		titleNode.textContent = title;
+
+		// Add everything back to DOM unless it is identical
+		titleDestination.replaceChildren(titleNode, origTitleNode);
+		descDestination.replaceChildren(descParentNode, origDescNode);
+		if( title !== origTitle || desc !== origDesc ){
+			descDestination.append(viewRawBtn);
+		}
+
+
+		// FINISH UP
+
 		this.element = element;
 		this.title = title;
 		this.description = desc;
 		this.plays = plays;
 		this.order = order;
-		this.tags = tags;
+		this.tags = tagArray;
 	}
 }
 
@@ -1080,11 +1173,16 @@ function domLoaded() {
 			document.documentElement.classList.remove('light');
 		}
 	};
-	footer.appendChild(themeSwitcher);
+	footer.append(themeSwitcher);
 
 	document.body.appendChild(footer);
 
 	var path = window.location.pathname;
+
+	// Author Style Switcher
+
+	authorCss = new AuthorCSS();
+	footer.append(authorCss.toggleNode);
 
 	// Per-page sections
 
@@ -1179,7 +1277,8 @@ function domLoaded() {
 		new AudioListing({
 			element: document.querySelector('.jp-type-single'),
 			titleSelector: '.jp-title',
-			descriptionSelector: '.jp-description'
+			descriptionSelector: '.jp-description',
+			parseStyle: GM_getValue('parseAuthorStyles', false)
 		});
 
 		let stop = document.querySelector('.jp-stop');
@@ -1279,7 +1378,7 @@ function domLoaded() {
 			let dl = document.createElement('a');
 
 			dl.classList.add('dl');
-			footer.appendChild(dl);
+			footer.append(dl);
 			dl.href = src;
 			dl.setAttribute("download", title.innerText + ' by ' + author.innerText + '.' + ext);
 			dl.setAttribute("target", "_blank");
