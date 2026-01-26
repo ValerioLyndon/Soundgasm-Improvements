@@ -1351,7 +1351,9 @@ function domLoaded() {
 			dl.classList.add('dl');
 			footer.appendChild(dl);
 			dl.href = src;
-			dl.setAttribute("download", title.innerText + ' by ' + author.innerText + '.' + ext);
+			const authorName = author === null ? 'Unknown Author' : author.innerText;
+			const filename = `${title.innerText} by ${authorName}.${ext}`;
+			dl.setAttribute("download", filename);
 			dl.setAttribute("target", "_blank");
 			dl.textContent = 'Download this audio';
 		}
