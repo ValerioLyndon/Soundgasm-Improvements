@@ -69,6 +69,9 @@ css.textContent = `
 		font-size: 12rem;
 		color: var(--text-low);
 	}
+	body.no-overflow {
+		overflow: hidden !important;
+	}
 
 	a {
 		color: var(--text-medium) !important;
@@ -262,7 +265,7 @@ css.textContent = `
 
 	.vl-directory {
 		display: grid;
-		width: 100vw;
+		width: calc(100vw - 20rem - 20px);
 		max-width: 620rem;
 		grid-auto-flow: row;
 		margin: 0 auto;
@@ -273,15 +276,36 @@ css.textContent = `
 		border-radius: 4rem;
 		overflow-y: auto;
 	}
+	.vl-sidebar.is-fixed {
+		position: fixed;
+		z-index: 5;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		box-sizing: border-box;
+	}
+	.vl-sidebar.is-hidden {
+		display: none;
+	}
+
+
+.vl-close {
+  position: fixed;
+  right: 10rem;
+  top: 10rem;
+  padding: 5rem;
+  background: var(--background);
+  font-weight: bold;
+  font-size: 18rem;
+  border-radius: 99px;
+  cursor: pointer;
+  display: block;
+  color: var(--text-high) !important;
+}
 
 	@media (max-width: 941px) {
 		.vl-split {
 			grid-auto-flow: row;
-		}
-		.vl-sidebar {
-			max-width: 600rem;
-			max-height: 80vh;
-			border: 1px solid var(--border);
 		}
 	}
 	@media (min-width: 940px) {
@@ -532,7 +556,6 @@ css.textContent = `
 		width: 300px !important;
 		height: 36px !important;
 	}
-
 `;
 
 const mobileCss = `
@@ -1241,6 +1264,44 @@ function domLoaded() {
 			playCountSelector: '.playCount',
 			filterElement: sidebar
 		});
+
+		// Create button to change sidebar state when on mobile
+		const toggleSidebar = () => {
+			if( sidebar.classList.contains('is-hidden') ){
+				sidebar.classList.remove('is-hidden');
+				document.body.classList.add('no-overflow');
+			}
+			else {
+				sidebar.classList.add('is-hidden');
+				document.body.classList.remove('no-overflow');
+			}
+		};
+		const sidebarToggle1 = document.createElement('a');
+		sidebarToggle1.textContent = 'Filters';
+		sidebarToggle1.addEventListener('click', toggleSidebar);
+		const sidebarToggle2 = document.createElement('a');
+		sidebarToggle2.textContent = 'Close';
+		sidebarToggle2.className = 'vl-close';
+		sidebarToggle2.addEventListener('click', toggleSidebar);
+		// Change layout if on mobile
+		const narrowPage = window.matchMedia('(width <= 940px)');
+		const recalculateSidebar = () => {
+			if( narrowPage.matches ){
+				document.querySelector('nav').append(sidebarToggle1);
+				sidebar.prepend(sidebarToggle2);
+				sidebar.classList.add('is-hidden');
+				sidebar.classList.add('is-fixed');
+			}
+			else {
+				sidebarToggle1.remove();
+				sidebarToggle2.remove();
+				sidebar.classList.remove('is-hidden');
+				sidebar.classList.remove('is-fixed');
+			}
+		}
+		recalculateSidebar();
+		narrowPage.addEventListener('change', recalculateSidebar);
+
 	}
 
 	// Player page
